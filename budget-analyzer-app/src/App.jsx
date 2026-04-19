@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Upload, FileText, TrendingUp, TrendingDown, Minus, X, Shield, ArrowRight, Check, Loader, ArrowLeft, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Zap } from 'lucide-react';
+import { Upload, FileText, TrendingUp, TrendingDown, Minus, X, Shield, ArrowRight, Check, Loader, ArrowLeft, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Zap, LogOut, User, PlusCircle, FolderOpen, Settings as SettingsIcon, Trash2 } from 'lucide-react';
 import './storage.js';
+import { supabase } from './supabase.js';
 
 const TEST_CSV = `Date,Description,Debit,Credit,Balance
 01/03/2026,Opening Balance,,,5000.00
@@ -865,6 +866,18 @@ export default function App() {
   const [showExportModal, setShowExportModal] = useState(false);
   const fileRef = useRef();
 
+  // Auth & cloud state
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [savedBudgets, setSavedBudgets] = useState([]);
+  const [budgetsLoading, setBudgetsLoading] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [budgetSaveName, setBudgetSaveName] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [loadedCats, setLoadedCats] = useState(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
   // Check for Stripe payment success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -874,6 +887,20 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname);
       setShowExportModal(true);
     }
+  }, []);
+
+  // Supabase auth state
+  useEffect(() => {
+    if (!supabase) { setAuthLoading(false); return; }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) setShowAuthModal(false);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   // Load saved categorisations from persistent storage on mount
@@ -957,8 +984,68 @@ export default function App() {
     setShowRaw(false);
     setBudgetAllocs({});
     setBudgetIncome('');
+    setLoadedCats(null);
     setView('upload');
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const signIn = async (provider) => {
+    if (!supabase) return;
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin + window.location.pathname,
+        ...(provider === 'azure' ? { scopes: 'email profile' } : {}),
+      },
+    });
+  };
+
+  const signOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserMenuOpen(false);
+    setView('upload');
+  };
+
+  const loadBudgets = async () => {
+    if (!supabase || !user) return;
+    setBudgetsLoading(true);
+    const { data } = await supabase
+      .from('budgets')
+      .select('id, name, created_at, data')
+      .order('created_at', { ascending: false });
+    setSavedBudgets(data ?? []);
+    setBudgetsLoading(false);
+  };
+
+  const saveBudget = async () => {
+    if (!supabase || !user) return;
+    const cats = computeBudgetCats(analysis);
+    const name = budgetSaveName.trim() || fileName || `Budget ${new Date().toLocaleDateString('en-AU')}`;
+    const { error } = await supabase.from('budgets').insert({
+      user_id: user.id,
+      name,
+      data: { income: analysis?.reliableMonthlyIncome ?? 0, cats, fileName },
+    });
+    if (!error) {
+      setBudgetSaveName('');
+      setShowSaveModal(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    }
+  };
+
+  const openSavedBudget = (budget) => {
+    setLoadedCats(budget.data.cats);
+    setBudgetIncome(String(Math.round(budget.data.income ?? 0)));
+    setView('budget');
+  };
+
+  const deleteBudget = async (id) => {
+    if (!supabase || !user) return;
+    await supabase.from('budgets').delete().eq('id', id);
+    setSavedBudgets(prev => prev.filter(b => b.id !== id));
   };
 
   const FIXED_BUDGET_CATS = new Set(['Mortgage', 'Rent/Housing', 'Insurance', 'Utilities', 'Phone & Internet', 'Internal Transfers', 'Credit Card Payment']);
@@ -1321,25 +1408,95 @@ export default function App() {
         .btn-analyse:hover { background: #0f2a1e; transform: translateY(-1px); }
       `}</style>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 80px' }}>
-        <header style={{ borderBottom: '3px double #1f3a2e', paddingBottom: 24, marginBottom: 40 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <h1 className="display" style={{ fontSize: 56, fontWeight: 900, margin: 0, lineHeight: 1 }}>
-                Pinchy
-              </h1>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#6b6758' }}>
-              <Shield size={14} /> <span className="mono" style={{ letterSpacing: '0.1em' }}>PROCESSED ON-DEVICE</span>
-            </div>
+      {/* ============ TOP NAV ============ */}
+      <nav style={{ background: '#1f3a2e', color: '#f4efe6', padding: '0 32px', display: 'flex', alignItems: 'center', height: 56, gap: 32, position: 'sticky', top: 0, zIndex: 100 }}>
+        <button
+          onClick={() => { setView('upload'); setLoadedCats(null); }}
+          className="display"
+          style={{ fontSize: 22, fontWeight: 700, color: '#f4efe6', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '-0.02em', flexShrink: 0 }}
+        >
+          Pinchy
+        </button>
+
+        {user && (
+          <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+            {[
+              { label: 'Create Budget', icon: <PlusCircle size={14} />, action: () => { setView('upload'); setLoadedCats(null); } },
+              { label: 'My Budgets', icon: <FolderOpen size={14} />, action: () => { setView('budgets'); loadBudgets(); } },
+              { label: 'Settings', icon: <SettingsIcon size={14} />, action: () => setView('settings') },
+            ].map(({ label, icon, action }) => (
+              <button
+                key={label}
+                onClick={action}
+                className="mono"
+                style={{ background: 'none', border: 'none', color: '#f4efe6', opacity: 0.8, fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', padding: '0 12px', height: 56, display: 'flex', alignItems: 'center', gap: 6, borderBottom: '2px solid transparent', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = 1; e.currentTarget.style.borderBottomColor = '#a8c5b0'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = 0.8; e.currentTarget.style.borderBottomColor = 'transparent'; }}
+              >
+                {icon}{label}
+              </button>
+            ))}
           </div>
-          <p style={{ fontSize: 17, maxWidth: 640, margin: '20px 0 0', color: '#3a3d38', lineHeight: 1.5 }}>
-            Upload a CSV export from your bank or credit card. Categorises your spending, compares each category to the average Australian household, and finds cheaper alternatives — all in your browser. <strong>The file is read locally and never uploaded.</strong>
-          </p>
-        </header>
+        )}
+
+        <div style={{ marginLeft: 'auto', position: 'relative' }}>
+          {authLoading ? null : user ? (
+            <>
+              <button
+                onClick={() => setUserMenuOpen(o => !o)}
+                style={{ background: 'none', border: '1px solid rgba(244,239,230,0.3)', color: '#f4efe6', padding: '6px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 4 }}
+              >
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#2e5a3a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                  {(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}
+                </div>
+                <span className="mono" style={{ fontSize: 11, letterSpacing: '0.05em', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.user_metadata?.full_name || user.email}
+                </span>
+              </button>
+              {userMenuOpen && (
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#f4efe6', border: '1px solid #d6cfc4', minWidth: 180, zIndex: 200 }}>
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #e8e1d0', fontSize: 12, color: '#6b6758' }} className="mono">
+                    {user.email}
+                  </div>
+                  <button
+                    onClick={signOut}
+                    style={{ width: '100%', padding: '12px 16px', background: 'none', border: 'none', color: '#1a1f1a', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
+                    <LogOut size={14} color="#6b6758" /> Sign out
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="mono"
+              style={{ background: 'transparent', border: '1px solid rgba(244,239,230,0.5)', color: '#f4efe6', padding: '8px 18px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Sign In
+            </button>
+          )}
+        </div>
+      </nav>
+
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 80px' }}>
+        {/* Hero — only on upload view */}
+        {view === 'upload' && (
+          <header style={{ borderBottom: '3px double #1f3a2e', paddingBottom: 24, marginBottom: 40 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
+              <h1 className="display" style={{ fontSize: 56, fontWeight: 900, margin: 0, lineHeight: 1 }}>Pinchy</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#6b6758' }}>
+                <Shield size={14} /> <span className="mono" style={{ letterSpacing: '0.1em' }}>PROCESSED ON-DEVICE</span>
+              </div>
+            </div>
+            <p style={{ fontSize: 17, maxWidth: 640, margin: '20px 0 0', color: '#3a3d38', lineHeight: 1.5 }}>
+              Upload a CSV export from your bank or credit card. Categorises your spending, compares each category to the average Australian household, and finds cheaper alternatives — all in your browser. <strong>The file is read locally and never uploaded.</strong>
+            </p>
+          </header>
+        )}
 
         {/* ============ PROGRESS STEPPER ============ */}
-        {(() => {
+        {['upload', 'results', 'budget'].includes(view) && (() => {
           const steps = [
             { key: 'upload', label: 'Upload' },
             { key: 'results', label: 'Create' },
@@ -1712,9 +1869,9 @@ export default function App() {
         )}
 
         {/* ============ BUDGET VIEW ============ */}
-        {view === 'budget' && analysis && (() => {
+        {view === 'budget' && (analysis || loadedCats) && (() => {
           const income = parseFloat(budgetIncome) || 0;
-          const cats = computeBudgetCats(analysis);
+          const cats = loadedCats ?? computeBudgetCats(analysis);
 
           const totalCurrent = cats.reduce((s, c) => s + c.current, 0);
           const totalSuggested = cats.reduce((s, c) => s + c.suggested, 0);
@@ -1724,16 +1881,26 @@ export default function App() {
           return (
             <div className="fade-in">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 40 }}>
-                <button onClick={() => setView('results')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
-                  <ArrowLeft size={14} /> Results
+                <button onClick={() => loadedCats ? setView('budgets') : setView('results')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                  <ArrowLeft size={14} /> {loadedCats ? 'My Budgets' : 'Results'}
                 </button>
                 <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>MY BUDGET</span>
-                <button
-                  onClick={() => setShowExportModal(true)}
-                  style={{ background: '#f4efe6', color: '#1f3a2e', border: 'none', padding: '6px 16px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-                >
-                  Export / Save
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {!loadedCats && (
+                    <button
+                      onClick={() => { if (!user) { setShowAuthModal(true); } else { setBudgetSaveName(fileName || ''); setShowSaveModal(true); } }}
+                      style={{ background: 'transparent', border: '1px solid rgba(244,239,230,0.5)', color: '#f4efe6', padding: '6px 14px', fontSize: 13, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      {saveSuccess ? <><Check size={13} /> Saved</> : 'Save'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowExportModal(true)}
+                    style={{ background: '#f4efe6', color: '#1f3a2e', border: 'none', padding: '6px 16px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    Export
+                  </button>
+                </div>
               </div>
 
               <section style={{ marginBottom: 48 }}>
@@ -1833,6 +2000,181 @@ export default function App() {
             </div>
           );
         })()}
+
+        {/* ============ BUDGETS DASHBOARD ============ */}
+        {view === 'budgets' && (
+          <div className="fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+              <div>
+                <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 6 }}>Cloud</div>
+                <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: 0 }}>My Budgets</h2>
+              </div>
+              <button
+                onClick={() => { setView('upload'); setLoadedCats(null); }}
+                style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '12px 24px', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <PlusCircle size={15} /> Create New Budget
+              </button>
+            </div>
+
+            {budgetsLoading ? (
+              <div style={{ textAlign: 'center', padding: 60, color: '#6b6758' }}><Loader size={24} className="mono" /></div>
+            ) : savedBudgets.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 24px', border: '2px dashed #d6cfc4' }}>
+                <FolderOpen size={40} color="#b0a898" style={{ marginBottom: 16 }} />
+                <div className="display" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>No saved budgets yet</div>
+                <p style={{ color: '#6b6758', margin: '0 0 24px' }}>Upload a statement and save your budget to see it here.</p>
+                <button onClick={() => setView('upload')} style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '12px 24px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>
+                  Upload a Statement
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                {savedBudgets.map(b => {
+                  const surplus = (b.data.income ?? 0) - (b.data.cats ?? []).reduce((s, c) => s + c.suggested, 0);
+                  return (
+                    <div key={b.id} style={{ background: '#fff', border: '1px solid #d6cfc4', padding: 24, position: 'relative' }}>
+                      <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 8 }}>
+                        {new Date(b.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </div>
+                      <div className="display" style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, paddingRight: 32 }}>{b.name}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
+                        <div style={{ background: '#f4efe6', padding: '10px 14px' }}>
+                          <div className="mono" style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 4 }}>Income</div>
+                          <div className="display" style={{ fontSize: 18, fontWeight: 700 }}>${Math.round(b.data.income ?? 0).toLocaleString('en-AU')}</div>
+                        </div>
+                        <div style={{ background: surplus >= 0 ? '#dfe8d8' : '#fde8e8', padding: '10px 14px' }}>
+                          <div className="mono" style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 4 }}>Surplus</div>
+                          <div className="display" style={{ fontSize: 18, fontWeight: 700, color: surplus >= 0 ? '#2e5a3a' : '#a03030' }}>${Math.round(surplus).toLocaleString('en-AU')}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => openSavedBudget(b)}
+                          style={{ flex: 1, background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '10px 0', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+                        >
+                          Open
+                        </button>
+                        <button
+                          onClick={() => deleteBudget(b.id)}
+                          style={{ background: 'none', border: '1px solid #d6cfc4', color: '#6b6758', padding: '10px 12px', cursor: 'pointer' }}
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============ SETTINGS ============ */}
+        {view === 'settings' && user && (
+          <div className="fade-in" style={{ maxWidth: 560 }}>
+            <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 6 }}>Account</div>
+            <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 32px' }}>Settings</h2>
+
+            <div style={{ background: '#fff', border: '1px solid #d6cfc4', padding: 24, marginBottom: 16 }}>
+              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 12 }}>Profile</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#1f3a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#f4efe6' }}>
+                  {(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>{user.user_metadata?.full_name || 'No name'}</div>
+                  <div className="mono" style={{ fontSize: 12, color: '#6b6758' }}>{user.email}</div>
+                  <div className="mono" style={{ fontSize: 11, color: '#b0a898', marginTop: 2 }}>
+                    Signed in via {user.app_metadata?.provider ?? 'email'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#fff', border: '1px solid #d6cfc4', padding: 24, marginBottom: 16 }}>
+              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 12 }}>Export unlock</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 14 }}>Budget report download</span>
+                <span className="mono" style={{ fontSize: 12, color: isPaid ? '#2e5a3a' : '#6b6758', fontWeight: 600 }}>
+                  {isPaid ? '✓ Unlocked' : 'Not purchased'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={signOut}
+              style={{ width: '100%', padding: '14px 24px', background: 'none', border: '1px solid #d6cfc4', color: '#6b6758', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              <LogOut size={14} /> Sign out
+            </button>
+          </div>
+        )}
+
+        {/* ============ AUTH MODAL ============ */}
+        {showAuthModal && (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(26,31,26,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={e => { if (e.target === e.currentTarget) setShowAuthModal(false); }}
+          >
+            <div style={{ background: '#f4efe6', maxWidth: 440, width: '100%', padding: 40, position: 'relative' }}>
+              <button onClick={() => setShowAuthModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b6758' }}>×</button>
+              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 8 }}>Free account</div>
+              <div className="display" style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, lineHeight: 1.1 }}>Sign in to save your budgets</div>
+              <p style={{ fontSize: 14, color: '#6b6758', margin: '0 0 28px', lineHeight: 1.5 }}>
+                Your budgets sync across devices. No password needed — use your existing account.
+              </p>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {[
+                  { provider: 'google', label: 'Continue with Google', color: '#fff', textColor: '#1a1f1a', border: '1px solid #d6cfc4' },
+                  { provider: 'azure', label: 'Continue with Microsoft', color: '#0078d4', textColor: '#fff', border: 'none' },
+                  { provider: 'apple', label: 'Continue with Apple', color: '#000', textColor: '#fff', border: 'none' },
+                ].map(({ provider, label, color, textColor, border }) => (
+                  <button
+                    key={provider}
+                    onClick={() => signIn(provider)}
+                    style={{ padding: '14px 20px', background: color, color: textColor, border, fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'center' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: 11, color: '#b0a898', margin: '20px 0 0', textAlign: 'center', lineHeight: 1.5 }}>
+                Apple sign-in requires an Apple Developer account to be configured. Google and Microsoft work out of the box.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ============ SAVE BUDGET MODAL ============ */}
+        {showSaveModal && (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(26,31,26,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={e => { if (e.target === e.currentTarget) setShowSaveModal(false); }}
+          >
+            <div style={{ background: '#f4efe6', maxWidth: 400, width: '100%', padding: 40, position: 'relative' }}>
+              <button onClick={() => setShowSaveModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b6758' }}>×</button>
+              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 8 }}>Save</div>
+              <div className="display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 20 }}>Name this budget</div>
+              <input
+                type="text"
+                value={budgetSaveName}
+                onChange={e => setBudgetSaveName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveBudget()}
+                placeholder={fileName || 'My Budget'}
+                autoFocus
+                style={{ width: '100%', padding: '12px 16px', border: '2px solid #1f3a2e', background: '#fff', fontSize: 15, fontFamily: 'inherit', outline: 'none', marginBottom: 16 }}
+              />
+              <button
+                onClick={saveBudget}
+                style={{ width: '100%', padding: '14px 24px', background: '#1f3a2e', color: '#f4efe6', border: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+              >
+                Save Budget
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ============ EXPORT / PAYWALL MODAL ============ */}
         {showExportModal && (
