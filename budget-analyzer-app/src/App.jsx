@@ -315,7 +315,7 @@ const HOW_TO_GET_THERE = {
   ],
   'Fuel': [
     'Use the 7-Eleven app\'s Fuel Lock — lock in a cheap price and redeem it at any 7-Eleven for up to 7 days',
-    'Swipe your Woolworths Everyday Rewards or Coles flybuys card every shop — both give 4c/L off at partner stations, and stack with docket discounts',
+    'Swipe your Woolworths Everyday Rewards or Coles flybuys card every shop — both give 4c/L off at partner stations. In QLD, the free Night Owl Owl Club app also gives 4c/L off at Night Owl servos',
     'Use MotorMouth or FuelCheck (NSW) to find the cheapest servo nearby, and fill up on Tuesdays or Wednesdays when prices typically bottom out',
   ],
   'Subscriptions': [
