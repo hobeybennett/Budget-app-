@@ -1342,12 +1342,11 @@ export default function App() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginTop: 40 }}>
                   {[
-                    { n: 'I', t: 'Categorised', d: 'Groceries, coffee, delivery, rent — sorted automatically from transaction descriptions.' },
-                    { n: 'II', t: 'Benchmarked', d: 'Each category compared with what the average Australian household spends (ABS + Finder data).' },
-                    { n: 'III', t: 'Optimised', d: "Suggests cheaper alternatives where they exist and estimates what you'd save by switching." },
+                    { t: 'Categorised', d: 'Groceries, coffee, delivery, rent — sorted automatically from transaction descriptions.' },
+                    { t: 'Benchmarked', d: 'Each category compared with what the average Australian household spends (ABS + Finder data).' },
+                    { t: 'Optimised', d: "Suggests cheaper alternatives where they exist and estimates what you'd save by switching." },
                   ].map((x) => (
-                    <div key={x.n} style={{ borderTop: '2px solid #1f3a2e', paddingTop: 16 }}>
-                      <div className="display" style={{ fontStyle: 'italic', fontSize: 14, color: '#6b6758', marginBottom: 6 }}>Chapter {x.n}</div>
+                    <div key={x.t} style={{ borderTop: '2px solid #1f3a2e', paddingTop: 16 }}>
                       <div className="display" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{x.t}</div>
                       <div style={{ fontSize: 14, color: '#3a3d38', lineHeight: 1.5 }}>{x.d}</div>
                     </div>
