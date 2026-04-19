@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Named font classes used in the artifact code */
+.display {
+  font-family: 'Fraunces', 'Times New Roman', serif;
+  font-feature-settings: 'ss01', 'ss02';
+}
+
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Fraunces', 'Times New Roman', serif;
+  background: #f4efe6;
+  color: #1a1f1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Used in the ledger table for hover rows */
+.row-hover:hover {
+  background: #f0ead8;
+}
