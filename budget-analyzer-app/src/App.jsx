@@ -646,7 +646,7 @@ function normalizeSigns(transactions, allLines) {
   });
 }
 export default function App() {
-  const [view, setView] = useState('upload'); // 'upload' | 'results'
+  const [view, setView] = useState('upload'); // 'upload' | 'results' | 'budget'
   const [transactions, setTransactions] = useState([]);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
@@ -655,6 +655,8 @@ export default function App() {
   const [showRaw, setShowRaw] = useState(false);
   const [columnMap, setColumnMap] = useState(null);
   const [mortgageCalc, setMortgageCalc] = useState({ principal: '', years: '', rate: '', type: 'variable', compRate: '' });
+  const [budgetAllocs, setBudgetAllocs] = useState({});
+  const [budgetIncome, setBudgetIncome] = useState('');
   const [allRows, setAllRows] = useState([]);
   // User-assigned category overrides, keyed by merchantKey(description).
   // e.g. { 'sportsbet melbourne': 'Entertainment' }
@@ -750,8 +752,27 @@ export default function App() {
     setError('');
     setRawLines([]);
     setShowRaw(false);
+    setBudgetAllocs({});
+    setBudgetIncome('');
     setView('upload');
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const FIXED_BUDGET_CATS = new Set(['Mortgage', 'Rent/Housing', 'Insurance', 'Utilities', 'Phone & Internet', 'Internal Transfers', 'Credit Card Payment']);
+
+  const goToBudget = () => {
+    if (!analysis) return;
+    const income = analysis.reliableMonthlyIncome || 0;
+    const allocs = { __savings__: Math.round(income * 0.2) };
+    for (const [cat, data] of Object.entries(analysis.monthlyByCategory)) {
+      const monthly = data.monthlyTotal;
+      allocs[cat] = FIXED_BUDGET_CATS.has(cat)
+        ? Math.round(monthly)
+        : Math.max(0, Math.round(monthly * 0.9));
+    }
+    setBudgetAllocs(allocs);
+    setBudgetIncome(income > 0 ? String(Math.round(income)) : '');
+    setView('budget');
   };
 
   const analysis = useMemo(() => {
@@ -1758,8 +1779,190 @@ export default function App() {
                 </section>
               );
             })()}
+
+            {/* --- Build my budget CTA --- */}
+            <section style={{ marginTop: 56, padding: 40, background: '#1f3a2e', color: '#f4efe6', textAlign: 'center' }}>
+              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 12 }}>Next step</div>
+              <div className="display" style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, lineHeight: 1.2 }}>
+                Build a budget that fits your life
+              </div>
+              <p style={{ fontSize: 15, opacity: 0.8, maxWidth: 480, margin: '0 auto 28px', lineHeight: 1.6 }}>
+                We'll use your actual spending as a starting point and generate a realistic monthly budget — then let you adjust every category until it works for you.
+              </p>
+              <button className="btn-analyse" onClick={goToBudget} style={{ background: '#f4efe6', color: '#1f3a2e' }}>
+                Build My Budget <ArrowRight size={20} />
+              </button>
+            </section>
           </div>
         )}
+
+        {/* ============ BUDGET VIEW ============ */}
+        {view === 'budget' && analysis && (() => {
+          const income = parseFloat(budgetIncome) || 0;
+          const setAlloc = (cat, val) => setBudgetAllocs(prev => ({ ...prev, [cat]: val }));
+          const totalAllocated = Object.values(budgetAllocs).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+          const unallocated = income - totalAllocated;
+          const isOver = unallocated < -0.5;
+
+          const cats = Object.entries(budgetAllocs)
+            .filter(([cat]) => cat !== '__savings__')
+            .map(([cat, val]) => ({
+              cat,
+              val,
+              isFixed: FIXED_BUDGET_CATS.has(cat),
+              current: analysis.monthlyByCategory[cat]?.monthlyTotal || 0,
+            }))
+            .sort((a, b) => {
+              if (a.isFixed && !b.isFixed) return -1;
+              if (!a.isFixed && b.isFixed) return 1;
+              return b.current - a.current;
+            });
+
+          const inputStyle = { width: '100%', padding: '8px 10px', border: '1px solid #d4ccba', background: '#fff', fontSize: 14, fontFamily: 'JetBrains Mono, monospace', textAlign: 'right', outline: 'none', boxSizing: 'border-box' };
+
+          const Row = ({ cat, val, isFixed, current, label }) => {
+            const budgeted = parseFloat(val) || 0;
+            const diff = budgeted - current;
+            const diffColor = diff > 5 ? '#a04020' : diff < -5 ? '#2e5a3a' : '#6b6758';
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px', gap: 12, alignItems: 'center', padding: '12px 20px', borderTop: '1px solid #e8e1d0', background: isFixed ? '#faf6ee' : '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {isFixed && <span className="mono" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', background: '#ebe4d5', color: '#6b6758', padding: '2px 6px' }}>Fixed</span>}
+                  <span style={{ fontSize: 15, fontWeight: isFixed ? 400 : 500 }}>{label || cat}</span>
+                </div>
+                <div className="mono" style={{ fontSize: 13, color: '#6b6758', textAlign: 'right' }}>
+                  {fmt(current)}<span style={{ fontSize: 11 }}>/mo</span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#6b6758', fontSize: 13, pointerEvents: 'none' }}>$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={val}
+                    onChange={e => setAlloc(cat, e.target.value)}
+                    style={{ ...inputStyle, paddingLeft: 22, background: isFixed ? '#faf6ee' : '#fff' }}
+                  />
+                </div>
+                <div className="mono" style={{ fontSize: 13, fontWeight: 600, color: diffColor, textAlign: 'right' }}>
+                  {diff === 0 ? '—' : (diff > 0 ? '+' : '') + fmt(Math.abs(diff))}
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="fade-in">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 40 }}>
+                <button onClick={() => setView('results')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                  <ArrowLeft size={14} /> Results
+                </button>
+                <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>MY BUDGET</span>
+                <button
+                  onClick={() => {
+                    const allocs = { __savings__: Math.round((parseFloat(budgetIncome) || analysis.reliableMonthlyIncome) * 0.2) };
+                    for (const [cat, data] of Object.entries(analysis.monthlyByCategory)) {
+                      allocs[cat] = FIXED_BUDGET_CATS.has(cat)
+                        ? Math.round(data.monthlyTotal)
+                        : Math.max(0, Math.round(data.monthlyTotal * 0.9));
+                    }
+                    setBudgetAllocs(allocs);
+                  }}
+                  style={{ background: 'transparent', border: '1px solid rgba(244,239,230,0.4)', color: '#f4efe6', fontSize: 12, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Reset
+                </button>
+              </div>
+
+              <section style={{ marginBottom: 40 }}>
+                <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Your new budget</h2>
+                <p style={{ color: '#6b6758', margin: '0 0 24px', fontSize: 15 }}>
+                  Built from your actual spending. Adjust any category — fixed costs are locked, everything else is yours to shape.
+                </p>
+
+                {/* Income input */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'center', padding: '20px 24px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 4 }}>
+                  <div>
+                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 6 }}>Monthly take-home income</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 24 }}>$</span>
+                      <input
+                        type="number"
+                        value={budgetIncome}
+                        onChange={e => setBudgetIncome(e.target.value)}
+                        placeholder={Math.round(analysis.reliableMonthlyIncome) || '0'}
+                        style={{ background: 'transparent', border: 'none', borderBottom: '2px solid rgba(244,239,230,0.5)', color: '#f4efe6', fontSize: 36, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, width: 200, outline: 'none', padding: '4px 0' }}
+                      />
+                    </div>
+                    {analysis.reliableMonthlyIncome > 0 && (
+                      <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>Detected from your statement: {fmt(analysis.reliableMonthlyIncome)}/mo</div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 4 }}>
+                      {isOver ? 'Over by' : 'Unallocated'}
+                    </div>
+                    <div className="display mono" style={{ fontSize: 32, fontWeight: 700, color: isOver ? '#f4a460' : unallocated < 1 ? '#a8c4a0' : '#f4efe6' }}>
+                      {income > 0 ? (isOver ? '-' : '') + fmt(Math.abs(unallocated)) : '—'}
+                    </div>
+                    {income > 0 && !isOver && unallocated > 0.5 && (
+                      <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Move this to savings</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                {income > 0 && (
+                  <div style={{ height: 6, background: '#e8e1d0', marginBottom: 32 }}>
+                    <div style={{ height: '100%', width: `${Math.min(100, (totalAllocated / income) * 100)}%`, background: isOver ? '#a04020' : '#1f3a2e', transition: 'width 0.2s, background 0.2s' }} />
+                  </div>
+                )}
+
+                {/* Column headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px', gap: 12, padding: '8px 20px', background: '#ebe4d5' }}>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758' }}>Category</div>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', textAlign: 'right' }}>Current</div>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', textAlign: 'right' }}>Budget</div>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', textAlign: 'right' }}>Change</div>
+                </div>
+
+                {/* Savings row */}
+                <Row
+                  cat="__savings__"
+                  label="Savings goal"
+                  val={budgetAllocs.__savings__ ?? ''}
+                  isFixed={false}
+                  current={0}
+                />
+
+                {/* Spending categories */}
+                {cats.map(({ cat, val, isFixed, current }) => (
+                  <Row key={cat} cat={cat} val={val} isFixed={isFixed} current={current} />
+                ))}
+
+                {/* Summary footer */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px', gap: 12, padding: '16px 20px', background: '#1f3a2e', color: '#f4efe6', marginTop: 4 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>Total allocated</div>
+                  <div className="mono" style={{ fontSize: 14, textAlign: 'right', opacity: 0.6 }}>{income > 0 ? fmt(income) : '—'}</div>
+                  <div className="mono" style={{ fontSize: 14, fontWeight: 700, textAlign: 'right' }}>{fmt(totalAllocated)}</div>
+                  <div className="mono" style={{ fontSize: 14, fontWeight: 700, textAlign: 'right', color: isOver ? '#f4a460' : '#a8c4a0' }}>
+                    {income > 0 ? (isOver ? '-' : '+') + fmt(Math.abs(unallocated)) : '—'}
+                  </div>
+                </div>
+
+                {isOver && (
+                  <div style={{ padding: '14px 20px', background: '#fae8d7', border: '1px solid #c47a3a', color: '#6b3a14', fontSize: 14, marginTop: 8 }}>
+                    You're allocating <strong>{fmt(Math.abs(unallocated))}/mo more than your income</strong>. Reduce spending categories or update your income above.
+                  </div>
+                )}
+                {!isOver && income > 0 && unallocated > 0.5 && (
+                  <div style={{ padding: '14px 20px', background: '#dfe8d8', border: '1px solid #2e5a3a', color: '#1f3a2e', fontSize: 14, marginTop: 8 }}>
+                    You have <strong>{fmt(unallocated)}/mo unallocated</strong> — consider adding it to your savings goal.
+                  </div>
+                )}
+              </section>
+            </div>
+          );
+        })()}
 
         <footer style={{ marginTop: 80, paddingTop: 24, borderTop: '3px double #1f3a2e', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, fontSize: 12, color: '#6b6758' }}>
           <div className="mono" style={{ letterSpacing: '0.1em' }}>
