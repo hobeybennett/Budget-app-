@@ -653,7 +653,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [rawLines, setRawLines] = useState([]);
   const [showRaw, setShowRaw] = useState(false);
-  const [showDebug, setShowDebug] = useState(true); // show by default so user can verify
   const [columnMap, setColumnMap] = useState(null);
   const [allRows, setAllRows] = useState([]);
   // User-assigned category overrides, keyed by merchantKey(description).
@@ -960,11 +959,8 @@ export default function App() {
         <header style={{ borderBottom: '3px double #1f3a2e', paddingBottom: 24, marginBottom: 40 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <div className="mono" style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6b6758' }}>
-                The Private Ledger · AU Edition
-              </div>
-              <h1 className="display" style={{ fontSize: 56, fontWeight: 900, margin: '8px 0 0', lineHeight: 1 }}>
-                Statement<br/><em style={{ fontWeight: 400 }}>Analyst</em>
+              <h1 className="display" style={{ fontSize: 56, fontWeight: 900, margin: 0, lineHeight: 1 }}>
+                Pinchy
               </h1>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#6b6758' }}>
@@ -1068,128 +1064,6 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* Debug table — shows what the parser saw for every transaction */}
-                <div style={{ marginTop: 32, textAlign: 'left' }}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-                    <button onClick={() => setShowDebug(!showDebug)} className="mono" style={{ background: 'transparent', border: '1px solid #6b6758', color: '#6b6758', padding: '8px 16px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                      {showDebug ? 'Hide' : 'Show'} Parser Debug Table
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Build a plain-text report of everything the parser saw
-                        const lines = [];
-                        lines.push('=== PARSER DEBUG REPORT ===');
-                        lines.push('');
-                        if (columnMap) {
-                          lines.push('COLUMNS DETECTED:');
-                          lines.push(`  date=col[${columnMap.date}] | description=col[${columnMap.description}] | amount=col[${columnMap.amount}] | debit=col[${columnMap.debit}] | credit=col[${columnMap.credit}] | balance=col[${columnMap.balance}]`);
-                        } else {
-                          lines.push('COLUMNS DETECTED: none');
-                        }
-                        lines.push('');
-                        lines.push(`ROWS: ${allRows.length} total (${allRows.filter(r => !r.rejected).length} accepted, ${allRows.filter(r => r.rejected).length} rejected)`);
-                        lines.push('');
-                        lines.push('TABLE:');
-                        lines.push('status | date       | description                   | amount       | sign source         | raw line');
-                        lines.push('-------+------------+-------------------------------+--------------+---------------------+--------------------------');
-                        for (const r of allRows) {
-                          const status = r.rejected ? 'REJECT' : 'OK    ';
-                          const date = (r.date || '').padEnd(10);
-                          const desc = (r.description || '').slice(0, 29).padEnd(29);
-                          const amt = r.rejected ? '—' : ((r.amount > 0 ? '+' : '−') + '$' + Math.abs(r.amount).toFixed(2));
-                          const amtStr = amt.padEnd(12);
-                          const signReason = (r._signReason || '').slice(0, 19).padEnd(19);
-                          const raw = (r._rawLine || '').slice(0, 60);
-                          lines.push(`${status} | ${date} | ${desc} | ${amtStr} | ${signReason} | ${raw}`);
-                        }
-                        lines.push('');
-                        lines.push('SUMMARY:');
-                        const inTotal = allRows.filter(r => !r.rejected && r.amount > 0).reduce((s, r) => s + r.amount, 0);
-                        const outTotal = allRows.filter(r => !r.rejected && r.amount < 0).reduce((s, r) => s + Math.abs(r.amount), 0);
-                        lines.push(`  Money In:  $${inTotal.toFixed(2)}`);
-                        lines.push(`  Money Out: $${outTotal.toFixed(2)}`);
-
-                        const text = lines.join('\n');
-                        navigator.clipboard.writeText(text).then(
-                          () => alert('Debug report copied to clipboard — paste it in the chat'),
-                          () => {
-                            const ta = document.createElement('textarea');
-                            ta.value = text;
-                            ta.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;';
-                            document.body.appendChild(ta);
-                            ta.select();
-                            alert('Auto-copy failed. The text is now in a textarea — press Cmd/Ctrl+C then close.');
-                          }
-                        );
-                      }}
-                      className="mono"
-                      style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '8px 16px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}
-                    >
-                      📋 Copy Full Debug Report
-                    </button>
-                    <button onClick={() => setShowRaw(!showRaw)} className="mono" style={{ background: 'transparent', border: '1px solid #6b6758', color: '#6b6758', padding: '8px 16px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                      {showRaw ? 'Hide' : 'Show'} Raw Lines ({rawLines.length})
-                    </button>
-                    {columnMap && (
-                      <span className="mono" style={{ fontSize: 11, color: '#6b6758' }}>
-                        Columns: date[{columnMap.date}] · desc[{columnMap.description}]
-                        {columnMap.amount >= 0 && ` · amount[${columnMap.amount}]`}
-                        {columnMap.debit >= 0 && ` · debit[${columnMap.debit}]`}
-                        {columnMap.credit >= 0 && ` · credit[${columnMap.credit}]`}
-                      </span>
-                    )}
-                  </div>
-
-                  {showDebug && allRows.length > 0 && (
-                    <div style={{ border: '1px solid #1f3a2e', background: '#fff', overflowX: 'auto' }}>
-                      <div style={{ padding: '8px 12px', background: '#ebe4d5', fontSize: 12, color: '#3a3d38', borderBottom: '1px solid #d4ccba' }}>
-                        Showing <strong>{allRows.length}</strong> detected rows ({allRows.filter(r => !r.rejected).length} accepted, <strong style={{ color: '#a04020' }}>{allRows.filter(r => r.rejected).length} rejected</strong>). Rejected rows are struck through.
-                      </div>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                        <thead>
-                          <tr style={{ background: '#1f3a2e', color: '#f4efe6' }}>
-                            <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: 10, whiteSpace: 'nowrap' }} className="mono">Date</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: 10 }} className="mono">Description</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: 10 }} className="mono">Sign Source</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: 10 }} className="mono">Direction</th>
-                            <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: 10, whiteSpace: 'nowrap' }} className="mono">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {allRows.map((t, i) => (
-                            <tr key={i} style={{ borderTop: '1px solid #e8e1d0', background: t.rejected ? '#fae8d7' : (i % 2 === 0 ? '#faf6ee' : '#fff'), opacity: t.rejected ? 0.75 : 1 }}>
-                              <td className="mono" style={{ padding: '6px 10px', color: '#6b6758', whiteSpace: 'nowrap' }}>{t.date}</td>
-                              <td style={{ padding: '6px 10px', maxWidth: 360, fontSize: 11, textDecoration: t.rejected ? 'line-through' : 'none' }} title={t._rawLine}>
-                                {t.description?.slice(0, 100)}{t.description?.length > 100 ? '…' : ''}
-                              </td>
-                              <td className="mono" style={{ padding: '6px 10px', fontSize: 11, color: '#6b6758', textAlign: 'center' }}>
-                                {t._signReason || '—'}
-                              </td>
-                              <td style={{ padding: '6px 10px', textAlign: 'center', fontSize: 10, color: t.rejected ? '#a04020' : (t.amount > 0 ? '#2e5a3a' : '#6b6758') }} title={t._signReason}>
-                                {t.rejected ? '✕' : (t.amount > 0 ? 'CR (in)' : 'DR (out)')}
-                              </td>
-                              <td className="mono" style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 500, color: t.rejected ? '#a04020' : (t.amount > 0 ? '#2e5a3a' : '#1a1f1a'), whiteSpace: 'nowrap' }}>
-                                {t.rejected ? '—' : (t.amount > 0 ? '+' : '−') + '$' + Math.abs(t.amount).toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {showDebug && (
-                    <div style={{ marginTop: 12, padding: 12, background: '#ebe4d5', fontSize: 12, color: '#3a3d38', lineHeight: 1.5 }}>
-                      <strong>How to read this:</strong> Every row from the CSV — including <strong style={{ color: '#a04020' }}>rejected ones (shown struck through)</strong>. "Sign Source" shows where the direction came from: a signed amount column, a separate debit column, or a separate credit column. Hover any row to see the raw CSV line.
-                    </div>
-                  )}
-
-                  {showRaw && (
-                    <pre className="mono" style={{ padding: 16, background: '#1f3a2e', color: '#f4efe6', fontSize: 11, maxHeight: 400, overflow: 'auto', whiteSpace: 'pre-wrap', margin: '12px 0 0' }}>
-                      {rawLines.join('\n')}
-                    </pre>
-                  )}
-                </div>
               </div>
             )}
           </div>
@@ -1562,44 +1436,33 @@ export default function App() {
 
             {/* --- Transaction ledger --- */}
             <section>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12, marginBottom: 4 }}>
-                <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
-                  The ledger
-                </h2>
-                <button onClick={() => setShowRaw(!showRaw)} className="mono" style={{ background: 'transparent', border: '1px solid #6b6758', color: '#6b6758', padding: '6px 12px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  {showRaw ? 'Show Parsed' : 'Show Raw CSV'}
-                </button>
-              </div>
+              <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+                The ledger
+              </h2>
               <p style={{ color: '#6b6758', margin: '0 0 24px', fontSize: 15 }}>
-                {showRaw ? 'Raw lines from the CSV — useful for debugging parser misses.' : 'Every transaction, categorised.'}
+                Every transaction, categorised.
               </p>
 
-              {!showRaw ? (
-                <div style={{ border: '1px solid #1f3a2e', maxHeight: 500, overflowY: 'auto' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 160px 120px', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', position: 'sticky', top: 0 }}>
-                    <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Date</div>
-                    <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Description</div>
-                    <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Category</div>
-                    <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'right' }}>Amount</div>
-                  </div>
-                  {analysis.categorized.map((t, i) => (
-                    <div key={i} className="row-hover" style={{ display: 'grid', gridTemplateColumns: '110px 1fr 160px 120px', padding: '10px 16px', borderTop: i > 0 ? '1px solid #e8e1d0' : 'none', alignItems: 'center' }}>
-                      <div className="mono" style={{ fontSize: 12, color: '#6b6758' }}>{t.date}</div>
-                      <div style={{ fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>{t.description}</div>
-                      <div style={{ fontSize: 12 }}>
-                        <span style={{ padding: '3px 8px', background: '#ebe4d5', border: '1px solid #d4ccba' }}>{t.category}</span>
-                      </div>
-                      <div className="mono" style={{ textAlign: 'right', fontSize: 14, fontWeight: 500, color: t.amount > 0 ? '#2e5a3a' : '#1a1f1a' }}>
-                        {t.amount > 0 ? '+' : ''}{fmt(Math.abs(t.amount))}
-                      </div>
-                    </div>
-                  ))}
+              <div style={{ border: '1px solid #1f3a2e', maxHeight: 500, overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 160px 120px', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', position: 'sticky', top: 0 }}>
+                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Date</div>
+                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Description</div>
+                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Category</div>
+                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', textAlign: 'right' }}>Amount</div>
                 </div>
-              ) : (
-                <pre className="mono" style={{ padding: 16, background: '#1f3a2e', color: '#f4efe6', fontSize: 11, maxHeight: 500, overflow: 'auto', whiteSpace: 'pre-wrap', margin: 0 }}>
-                  {rawLines.join('\n')}
-                </pre>
-              )}
+                {analysis.categorized.map((t, i) => (
+                  <div key={i} className="row-hover" style={{ display: 'grid', gridTemplateColumns: '110px 1fr 160px 120px', padding: '10px 16px', borderTop: i > 0 ? '1px solid #e8e1d0' : 'none', alignItems: 'center' }}>
+                    <div className="mono" style={{ fontSize: 12, color: '#6b6758' }}>{t.date}</div>
+                    <div style={{ fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>{t.description}</div>
+                    <div style={{ fontSize: 12 }}>
+                      <span style={{ padding: '3px 8px', background: '#ebe4d5', border: '1px solid #d4ccba' }}>{t.category}</span>
+                    </div>
+                    <div className="mono" style={{ textAlign: 'right', fontSize: 14, fontWeight: 500, color: t.amount > 0 ? '#2e5a3a' : '#1a1f1a' }}>
+                      {t.amount > 0 ? '+' : ''}{fmt(Math.abs(t.amount))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
 
             {/* --- Categorisation helper (post-it card stack style) --- */}
