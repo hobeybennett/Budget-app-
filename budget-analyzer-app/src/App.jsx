@@ -1341,32 +1341,29 @@ export default function App() {
 
                       {/* Suggestions for this category */}
                       {c.suggestions.length > 0 && (
-                        <div style={{ padding: '16px 24px', background: '#f4efe6' }}>
-                          <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 12 }}>
-                            Potential savings in this category
-                          </div>
-                          <div style={{ display: 'grid', gap: 10 }}>
-                            {c.suggestions.map((s, i) => (
-                              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'center', padding: '10px 0', borderTop: i > 0 ? '1px dashed #d4ccba' : 'none' }}>
-                                <div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                                    <span className="display" style={{ fontSize: 16, textTransform: 'capitalize', fontWeight: 500 }}>{s.merchant}</span>
-                                    <ArrowRight size={13} color="#6b6758" />
-                                    <span className="display" style={{ fontSize: 16, fontStyle: 'italic' }}>{s.alt}</span>
-                                  </div>
-                                  <div style={{ fontSize: 13, color: '#3a3d38', lineHeight: 1.4 }}>
-                                    You spend <strong>{fmt(s.merchantTotal / analysis.periodMonths)}/mo</strong> — {s.reason}
-                                  </div>
+                        <div style={{ padding: '16px 24px', background: '#f4efe6', display: 'grid', gap: 12 }}>
+                          {c.suggestions.map((s, i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'center', background: '#fff', border: '1px solid #2e5a3a', padding: '16px 20px' }}>
+                              <div>
+                                <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>
+                                  Instead of {s.merchant}
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                  <div className="mono" style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 2 }}>Save</div>
-                                  <div className="display mono" style={{ fontSize: 20, fontWeight: 700, color: '#2e5a3a' }}>
-                                    {fmt(s.estimatedSavings / analysis.periodMonths)}<span style={{ fontSize: 12, color: '#6b6758' }}>/mo</span>
-                                  </div>
+                                <div className="display" style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>
+                                  {s.alt}
+                                </div>
+                                <div style={{ fontSize: 13, color: '#3a3d38', lineHeight: 1.4 }}>
+                                  {s.reason}
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                              <div style={{ textAlign: 'center', background: '#1f3a2e', color: '#f4efe6', padding: '12px 18px', minWidth: 90 }}>
+                                <div className="mono" style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 4 }}>Save up to</div>
+                                <div className="display mono" style={{ fontSize: 24, fontWeight: 700, lineHeight: 1 }}>
+                                  {fmt(s.estimatedSavings / analysis.periodMonths)}
+                                </div>
+                                <div className="mono" style={{ fontSize: 11, opacity: 0.7 }}>/mo</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
