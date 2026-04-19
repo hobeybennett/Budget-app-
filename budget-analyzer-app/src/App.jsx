@@ -1281,6 +1281,49 @@ export default function App() {
           </p>
         </header>
 
+        {/* ============ PROGRESS STEPPER ============ */}
+        {(() => {
+          const steps = [
+            { key: 'upload', label: 'Upload' },
+            { key: 'results', label: 'Get' },
+            { key: 'budget', label: 'Download' },
+          ];
+          const currentIdx = steps.findIndex(s => s.key === view);
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', padding: '24px 40px', borderBottom: '1px solid #d6cfc4' }}>
+              {steps.map((step, i) => {
+                const done = i < currentIdx;
+                const active = i === currentIdx;
+                return (
+                  <React.Fragment key={step.key}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        background: done ? '#1f3a2e' : active ? '#1f3a2e' : 'transparent',
+                        border: done || active ? '2px solid #1f3a2e' : '2px solid #b0a898',
+                        color: done || active ? '#f4efe6' : '#b0a898',
+                        fontSize: 12, fontWeight: 700,
+                      }}>
+                        {done ? <Check size={13} /> : i + 1}
+                      </div>
+                      <span className="mono" style={{
+                        fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
+                        color: active ? '#1f3a2e' : done ? '#1f3a2e' : '#b0a898',
+                        fontWeight: active ? 700 : 500,
+                      }}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {i < steps.length - 1 && (
+                      <div style={{ flex: 1, height: 2, margin: '0 16px', background: done ? '#1f3a2e' : '#d6cfc4' }} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          );
+        })()}
+
         {/* ============ UPLOAD VIEW ============ */}
         {view === 'upload' && !loading && (
           <div className="fade-in">
