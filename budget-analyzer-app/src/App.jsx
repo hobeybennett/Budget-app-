@@ -963,8 +963,11 @@ export default function App() {
 
   const FIXED_BUDGET_CATS = new Set(['Mortgage', 'Rent/Housing', 'Insurance', 'Utilities', 'Phone & Internet', 'Internal Transfers', 'Credit Card Payment']);
 
-  // Replace with your Stripe Payment Link — set success URL to redirect back here with ?payment=success
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/YOUR_LINK_HERE?success_url=' + encodeURIComponent(window.location.origin + window.location.pathname + '?payment=success');
+  // Stripe Payment Link — create at dashboard.stripe.com/payment-links
+  // In the link settings → After payment → set redirect to:
+  //   https://hobeybennett.github.io/Budget-app-/?payment=success
+  // Then paste your link ID below (the part after buy.stripe.com/)
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/YOUR_LINK_HERE';
 
   const computeBudgetCats = (a) => {
     if (!a) return [];
