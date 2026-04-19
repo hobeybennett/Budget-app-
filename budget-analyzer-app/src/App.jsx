@@ -1285,7 +1285,7 @@ export default function App() {
         {(() => {
           const steps = [
             { key: 'upload', label: 'Upload' },
-            { key: 'results', label: 'Get' },
+            { key: 'results', label: 'Create' },
             { key: 'budget', label: 'Download' },
           ];
           const currentIdx = steps.findIndex(s => s.key === view);
