@@ -987,75 +987,119 @@ export default function App() {
       .sort((a, b) => b.saving - a.saving);
   };
 
-  const exportCSV = (cats) => {
+  const exportReport = (cats) => {
     const dateStr = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
     const incomeStreams = analysis?.reliableStreams ?? [];
     const totalIncome = analysis?.reliableMonthlyIncome ?? 0;
-    const totalCurrent = cats.reduce((s, c) => s + c.current, 0);
     const totalSuggested = cats.reduce((s, c) => s + c.suggested, 0);
-    const totalSaving = totalCurrent - totalSuggested;
     const surplus = totalIncome - totalSuggested;
     const savingsGoal = totalIncome * 0.2;
+    const catsWithTips = cats.filter(c => c.tips?.length);
 
-    const c = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    // Build side-by-side: [income label, income $, spacer, expense category, current $, suggested $, saving $, annual saving $]
-    const COL = 8;
-    const pad = (arr) => { while (arr.length < COL) arr.push(''); return arr; };
-    const row = (...cells) => pad(cells).map(c).join(',');
-    const blank = () => Array(COL).fill('""').join(',');
+    const fmt = (n) => '$' + Math.round(n).toLocaleString('en-AU');
 
-    const rows = [
-      row('PINCHY — Monthly Budget Plan', '', '', '', '', '', '', ''),
-      row(`Generated: ${dateStr}`, '', '', '', '', '', '', ''),
-      row('pinchy.app', '', '', '', '', '', '', ''),
-      blank(),
-      // Column headers
-      row('INCOME', '', '', 'EXPENSES', '', '', '', ''),
-      row('Source', 'Monthly ($)', '', 'Category', 'Current ($/mo)', 'Suggested ($/mo)', 'Saving ($/mo)', 'Saving ($/yr)'),
-    ];
+    const incomeRows = incomeStreams.map(r =>
+      `<tr><td>${r.sample}</td><td class="num">${fmt(r.monthlyEquivalent)}</td></tr>`
+    ).join('');
 
-    // Zip income streams (left) with expense categories (right)
-    const maxRows = Math.max(incomeStreams.length, cats.length);
-    for (let i = 0; i < maxRows; i++) {
-      const inc = incomeStreams[i];
-      const exp = cats[i];
-      rows.push(row(
-        inc ? inc.sample : '',
-        inc ? `$${Math.round(inc.monthlyEquivalent).toLocaleString('en-AU')}` : '',
-        '',
-        exp ? exp.cat : '',
-        exp ? `$${exp.current.toFixed(2)}` : '',
-        exp ? `$${exp.suggested.toFixed(2)}` : '',
-        exp ? `$${exp.saving.toFixed(2)}` : '',
-        exp ? `$${(exp.saving * 12).toFixed(2)}` : '',
-      ));
-    }
+    const expenseRows = cats.map(c =>
+      `<tr><td>${c.cat}${FIXED_BUDGET_CATS.has(c.cat) ? ' <span class="badge">Committed</span>' : ''}</td><td class="num">${fmt(c.suggested)}</td></tr>`
+    ).join('');
 
-    // Totals row
-    rows.push(blank());
-    rows.push(row('Total Income', `$${Math.round(totalIncome).toLocaleString('en-AU')}`, '', 'Total Expenses', `$${totalCurrent.toFixed(2)}`, `$${totalSuggested.toFixed(2)}`, `$${totalSaving.toFixed(2)}`, `$${(totalSaving * 12).toFixed(2)}`));
-    rows.push(row('', '', '', 'Monthly Surplus', '', `$${surplus.toFixed(2)}`, '', ''));
-    rows.push(row('', '', '', '20% Savings Goal', '', `$${savingsGoal.toFixed(2)}`, '', ''));
-    rows.push(blank());
+    const tipSections = catsWithTips.map(c =>
+      `<div class="tip-block">
+        <div class="tip-cat">${c.cat}</div>
+        ${c.tips.map(t => `<div class="tip-item"><span class="tip-dot">→</span>${t}</div>`).join('')}
+      </div>`
+    ).join('');
 
-    // Tips section below
-    const catsWithTips = cats.filter(cc => cc.tips?.length);
-    if (catsWithTips.length > 0) {
-      rows.push(row('HOW TO GET THERE', '', '', '', '', '', '', ''));
-      rows.push(row('Category', 'Tip 1', 'Tip 2', 'Tip 3', '', '', '', ''));
-      for (const { cat, tips } of catsWithTips) {
-        rows.push(row(cat, tips[0] ?? '', tips[1] ?? '', tips[2] ?? '', '', '', '', ''));
-      }
-      rows.push(blank());
-    }
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pinchy — Budget Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f4efe6;color:#1a1f1a;font-family:'JetBrains Mono',monospace;font-size:13px;padding:0}
+  .display{font-family:'Fraunces',serif}
+  header{background:#1f3a2e;color:#f4efe6;padding:32px 48px;display:flex;justify-content:space-between;align-items:flex-end}
+  header .logo{font-family:'Fraunces',serif;font-size:36px;font-weight:700;letter-spacing:-0.02em}
+  header .meta{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;text-align:right;line-height:1.8}
+  .body{padding:48px}
+  h2{font-family:'Fraunces',serif;font-size:22px;font-weight:700;margin-bottom:16px;color:#1f3a2e}
+  .columns{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:48px}
+  table{width:100%;border-collapse:collapse}
+  thead tr{background:#1f3a2e;color:#f4efe6}
+  thead th{padding:10px 14px;text-align:left;font-size:10px;letter-spacing:0.15em;text-transform:uppercase;font-weight:600}
+  thead th.num{text-align:right}
+  tbody tr{border-bottom:1px solid #e8e1d0}
+  tbody tr:last-child{border-bottom:none}
+  tbody td{padding:10px 14px;font-size:13px}
+  td.num{text-align:right;font-weight:600;font-family:'Fraunces',serif;font-size:15px}
+  tfoot tr{background:#f0ebe0;font-weight:700}
+  tfoot td{padding:12px 14px;border-top:2px solid #1f3a2e}
+  tfoot td.num{font-family:'Fraunces',serif;font-size:17px;font-weight:700;color:#1f3a2e}
+  .badge{background:#d6cfc4;color:#6b6758;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;vertical-align:middle;margin-left:6px}
+  .surplus-row td{color:#2e5a3a;font-weight:700}
+  .surplus-row td.num{color:#2e5a3a}
+  .tips-section{margin-top:0}
+  .tips-section h2{margin-bottom:24px}
+  .tips-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .tip-block{background:#fff;border:1px solid #2e5a3a;padding:20px}
+  .tip-cat{font-family:'Fraunces',serif;font-size:15px;font-weight:700;color:#1f3a2e;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #e8e1d0}
+  .tip-item{display:flex;gap:10px;padding:6px 0;font-size:12px;color:#3a3d38;line-height:1.5;border-bottom:1px solid #f0ebe0}
+  .tip-item:last-child{border-bottom:none}
+  .tip-dot{color:#2e5a3a;font-weight:700;flex-shrink:0}
+  footer{background:#1f3a2e;color:#f4efe6;padding:20px 48px;display:flex;justify-content:space-between;align-items:center;margin-top:48px}
+  footer .ft{font-family:'Fraunces',serif;font-size:18px;font-weight:700}
+  footer .url{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.6}
+  @media print{body{background:#fff}header,footer{-webkit-print-color-adjust:exact;print-color-adjust:exact}thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}.tip-block{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Pinchy</div>
+  <div class="meta">Monthly Budget Plan<br>Generated ${dateStr}</div>
+</header>
+<div class="body">
+  <div class="columns">
+    <div>
+      <h2>Income</h2>
+      <table>
+        <thead><tr><th>Source</th><th class="num">Monthly</th></tr></thead>
+        <tbody>${incomeRows || '<tr><td colspan="2" style="opacity:0.5;font-style:italic">No recurring income detected</td></tr>'}</tbody>
+        <tfoot><tr><td>Total Income</td><td class="num">${fmt(totalIncome)}</td></tr></tfoot>
+      </table>
+    </div>
+    <div>
+      <h2>Suggested Budget</h2>
+      <table>
+        <thead><tr><th>Category</th><th class="num">Monthly</th></tr></thead>
+        <tbody>${expenseRows}</tbody>
+        <tfoot>
+          <tr><td>Total Expenses</td><td class="num">${fmt(totalSuggested)}</td></tr>
+          <tr class="surplus-row"><td>Monthly Surplus</td><td class="num">${fmt(surplus)}</td></tr>
+          <tr><td style="opacity:0.7;font-size:11px">20% Savings Goal</td><td class="num" style="opacity:0.7;font-size:12px">${fmt(savingsGoal)}</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  ${catsWithTips.length > 0 ? `<div class="tips-section"><h2>How to Get There</h2><div class="tips-grid">${tipSections}</div></div>` : ''}
+</div>
+<footer>
+  <div class="ft">Pinchy</div>
+  <div class="url">pinchy.app</div>
+</footer>
+</body>
+</html>`;
 
-    rows.push(row('Pinchy — Budget Analyser', 'pinchy.app', '', '', '', '', '', ''));
-
-    const csv = rows.join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `pinchy-budget-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `pinchy-budget-${new Date().toISOString().slice(0, 10)}.html`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -1811,18 +1855,11 @@ export default function App() {
                   </p>
                   <div style={{ display: 'grid', gap: 12 }}>
                     <button
-                      onClick={() => { exportCSV(computeBudgetCats(analysis)); setShowExportModal(false); }}
+                      onClick={() => { exportReport(computeBudgetCats(analysis)); setShowExportModal(false); }}
                       style={{ padding: '16px 24px', background: '#1f3a2e', color: '#f4efe6', border: 'none', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                     >
-                      <span>Download as CSV</span>
-                      <span style={{ opacity: 0.7, fontSize: 13 }}>Opens in Excel / Sheets</span>
-                    </button>
-                    <button
-                      onClick={() => { setShowExportModal(false); setTimeout(() => window.print(), 100); }}
-                      style={{ padding: '16px 24px', background: '#fff', color: '#1f3a2e', border: '2px solid #1f3a2e', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                    >
-                      <span>Print / Save as PDF</span>
-                      <span style={{ opacity: 0.6, fontSize: 13 }}>Use browser print dialog</span>
+                      <span>Download Budget Report</span>
+                      <span style={{ opacity: 0.7, fontSize: 13 }}>Open in browser · print to PDF</span>
                     </button>
                   </div>
                 </>
@@ -1836,8 +1873,8 @@ export default function App() {
 
                   <div style={{ display: 'grid', gap: 10, marginBottom: 28 }}>
                     {[
-                      'CSV export — opens in Excel, Google Sheets, or Numbers',
-                      'PDF / Print — clean, shareable one-page budget',
+                      'Branded HTML report — income vs suggested budget, side by side',
+                      'Tips per category — open in any browser, print to PDF',
                       'Yours forever — no subscription, no account required',
                     ].map((feat, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#3a3d38' }}>
