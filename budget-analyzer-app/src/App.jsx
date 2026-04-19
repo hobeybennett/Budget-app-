@@ -988,20 +988,63 @@ export default function App() {
   };
 
   const exportCSV = (cats) => {
-    const rows = [['Category', 'Current ($/mo)', 'Suggested ($/mo)', 'Saving ($/mo)', 'Saving ($/yr)']];
-    for (const { cat, current, suggested, saving } of cats) {
-      rows.push([cat, current.toFixed(2), suggested.toFixed(2), saving.toFixed(2), (saving * 12).toFixed(2)]);
-    }
+    const dateStr = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+    const income = analysis?.reliableMonthlyIncome ?? 0;
     const totalCurrent = cats.reduce((s, c) => s + c.current, 0);
     const totalSuggested = cats.reduce((s, c) => s + c.suggested, 0);
     const totalSaving = totalCurrent - totalSuggested;
-    rows.push(['TOTAL', totalCurrent.toFixed(2), totalSuggested.toFixed(2), totalSaving.toFixed(2), (totalSaving * 12).toFixed(2)]);
-    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const savingsGoal = income * 0.2;
+
+    const cell = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const row = (...cells) => cells.map(cell).join(',');
+    const blank = () => '';
+
+    const rows = [
+      row('PINCHY — Your Personalised Budget Plan', '', '', '', '', ''),
+      row(`Generated: ${dateStr}`, '', '', '', '', ''),
+      row('pinchy.app', '', '', '', '', ''),
+      blank(),
+      row('INCOME SUMMARY', '', '', '', '', ''),
+      row('Estimated Monthly Income', `$${Math.round(income).toLocaleString('en-AU')}`, '', '', '', ''),
+      row('20% Savings Goal', `$${Math.round(savingsGoal).toLocaleString('en-AU')}`, '', '', '', ''),
+      blank(),
+      row('BUDGET PLAN', '', '', '', '', ''),
+      row('Category', 'Current ($/mo)', 'Suggested ($/mo)', 'Monthly Saving', 'Annual Saving', 'Status'),
+    ];
+
+    for (const { cat, current, suggested, saving } of cats) {
+      const status = FIXED_BUDGET_CATS.has(cat) ? 'Committed' : saving > 0 ? 'Reducible' : 'On track';
+      rows.push(row(cat, `$${current.toFixed(2)}`, `$${suggested.toFixed(2)}`, `$${saving.toFixed(2)}`, `$${(saving * 12).toFixed(2)}`, status));
+    }
+
+    rows.push(blank());
+    rows.push(row('TOTALS', '', '', '', '', ''));
+    rows.push(row('Total Current Spending', `$${totalCurrent.toFixed(2)}`, '', '', '', ''));
+    rows.push(row('Suggested Budget', `$${totalSuggested.toFixed(2)}`, '', '', '', ''));
+    rows.push(row('Monthly Saving', `$${totalSaving.toFixed(2)}`, '', '', '', ''));
+    rows.push(row('Annual Saving', `$${(totalSaving * 12).toFixed(2)}`, '', '', '', ''));
+    rows.push(row('20% Savings Goal', `$${savingsGoal.toFixed(2)}`, '', '', '', ''));
+    rows.push(blank());
+
+    const catsWithTips = cats.filter(c => c.tips?.length);
+    if (catsWithTips.length > 0) {
+      rows.push(row('HOW TO GET THERE', '', '', '', '', ''));
+      rows.push(row('Category', 'Tip 1', 'Tip 2', 'Tip 3', '', ''));
+      for (const { cat, tips } of catsWithTips) {
+        rows.push(row(cat, tips[0] ?? '', tips[1] ?? '', tips[2] ?? '', '', ''));
+      }
+      rows.push(blank());
+    }
+
+    rows.push(row('Pinchy — Budget Analyser', 'pinchy.app', '', '', '', ''));
+
+    const csv = rows.join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'pinchy-budget.csv';
+    a.download = `pinchy-budget-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   const goToBudget = () => {
