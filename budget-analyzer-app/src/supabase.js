@@ -1,24 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Returns null when env vars aren't set (local dev without Supabase, or build before secrets are added).
-// All auth-dependent UI checks for `supabase !== null` before calling.
-export const supabase = url && key
-  ? createClient(url, key, { auth: { flowType: 'pkce' } })
-  : null;
+export const supabase = createClient(
+  'https://qqflfnclzjzhqbvlnmrn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxZmxmbmNsemp6aHFidmxubXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjQ5NzAsImV4cCI6MjA5MjIwMDk3MH0.yjUbHRWftXd96nWyEJy-gQWiYfaLanvsjFooDtxcD10',
+  { auth: { flowType: 'pkce' } }
+);
 
 /*
-  ── Supabase setup ──────────────────────────────────────────────────────────
-  1. Create a free project at supabase.com
-  2. Settings → API → copy "Project URL" and "anon public" key
-  3. Add them as GitHub repository secrets:
-       VITE_SUPABASE_URL   = https://xxxx.supabase.co
-       VITE_SUPABASE_ANON_KEY = eyJ...
-  4. Authentication → Providers → enable Google, Apple, Azure (Microsoft)
-     Set redirect URL to: https://hobeybennett.github.io/Budget-app-
-  5. Run this SQL in the Supabase SQL editor:
+  ── Remaining Supabase setup ────────────────────────────────────────────────
+  1. Authentication → Providers → enable Google and Azure (Microsoft)
+  2. Authentication → URL Configuration → add allowed redirect URL:
+       https://hobeybennett.github.io/Budget-app-
+  3. SQL Editor → run:
 
   create table budgets (
     id         uuid default gen_random_uuid() primary key,
