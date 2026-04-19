@@ -654,6 +654,7 @@ export default function App() {
   const [rawLines, setRawLines] = useState([]);
   const [showRaw, setShowRaw] = useState(false);
   const [columnMap, setColumnMap] = useState(null);
+  const [mortgageCalc, setMortgageCalc] = useState({ principal: '', years: '', rate: '', type: 'variable', compRate: '' });
   const [allRows, setAllRows] = useState([]);
   // User-assigned category overrides, keyed by merchantKey(description).
   // e.g. { 'sportsbet melbourne': 'Entertainment' }
@@ -1366,6 +1367,137 @@ export default function App() {
                           ))}
                         </div>
                       )}
+
+                      {/* Mortgage calculator */}
+                      {c.category === 'Mortgage' && (() => {
+                        const INDICATIVE_RATES = { variable: 5.74, fixed: 5.79 };
+                        const mc = mortgageCalc;
+                        const setMc = (patch) => setMortgageCalc(prev => ({ ...prev, ...patch }));
+
+                        const P = parseFloat(mc.principal.replace(/,/g, '')) || 0;
+                        const n = parseFloat(mc.years) * 12 || 0;
+                        const rCurrent = (parseFloat(mc.rate) / 100) / 12;
+                        const compRateVal = mc.compRate !== '' ? parseFloat(mc.compRate) : INDICATIVE_RATES[mc.type];
+                        const rComp = (compRateVal / 100) / 12;
+
+                        const calcPayment = (principal, monthlyRate, months) => {
+                          if (!principal || !monthlyRate || !months) return 0;
+                          return principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+                        };
+
+                        const currentPayment = calcPayment(P, rCurrent, n);
+                        const compPayment = calcPayment(P, rComp, n);
+                        const monthlySaving = currentPayment - compPayment;
+                        const totalSaving = monthlySaving * n;
+                        const hasResult = P > 0 && n > 0 && parseFloat(mc.rate) > 0 && monthlySaving > 0;
+
+                        const inputStyle = { width: '100%', padding: '10px 12px', border: '1px solid #d4ccba', background: '#fff', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' };
+                        const labelStyle = { fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6, display: 'block' };
+
+                        return (
+                          <div style={{ padding: '24px', background: '#fff', borderTop: '2px solid #1f3a2e' }}>
+                            <div className="display" style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
+                              Calculate your refinancing savings
+                            </div>
+                            <p style={{ fontSize: 14, color: '#6b6758', margin: '0 0 20px', lineHeight: 1.5 }}>
+                              Enter your loan details to see how much you could save by switching to a better rate.
+                            </p>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
+                              <div>
+                                <label className="mono" style={labelStyle}>Loan balance remaining</label>
+                                <div style={{ position: 'relative' }}>
+                                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#6b6758', fontSize: 15 }}>$</span>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="450,000"
+                                    value={mc.principal}
+                                    onChange={e => setMc({ principal: e.target.value })}
+                                    style={{ ...inputStyle, paddingLeft: 24 }}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="mono" style={labelStyle}>Years remaining</label>
+                                <input
+                                  type="number"
+                                  min="1" max="30"
+                                  placeholder="25"
+                                  value={mc.years}
+                                  onChange={e => setMc({ years: e.target.value })}
+                                  style={inputStyle}
+                                />
+                              </div>
+                              <div>
+                                <label className="mono" style={labelStyle}>Your current rate</label>
+                                <div style={{ position: 'relative' }}>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="6.40"
+                                    value={mc.rate}
+                                    onChange={e => setMc({ rate: e.target.value })}
+                                    style={{ ...inputStyle, paddingRight: 28 }}
+                                  />
+                                  <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#6b6758', fontSize: 15 }}>%</span>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="mono" style={labelStyle}>Loan type</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+                                  {['variable', 'fixed'].map(t => (
+                                    <button
+                                      key={t}
+                                      onClick={() => setMc({ type: t, compRate: '' })}
+                                      style={{ padding: '10px', border: '1px solid #d4ccba', background: mc.type === t ? '#1f3a2e' : '#fff', color: mc.type === t ? '#f4efe6' : '#1a1f1a', fontSize: 13, textTransform: 'capitalize', cursor: 'pointer', fontFamily: 'inherit', marginLeft: t === 'fixed' ? -1 : 0 }}
+                                    >
+                                      {t}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ padding: '12px 16px', background: '#f4efe6', border: '1px solid #d4ccba', fontSize: 13, color: '#3a3d38', marginBottom: 20 }}>
+                              <span className="mono" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6b6758' }}>Comparison rate </span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={mc.compRate !== '' ? mc.compRate : compRateVal}
+                                onChange={e => setMc({ compRate: e.target.value })}
+                                style={{ width: 70, padding: '2px 6px', border: '1px solid #d4ccba', fontSize: 13, fontFamily: 'inherit', marginRight: 4 }}
+                              />
+                              <span style={{ marginRight: 12 }}>% — indicative best {mc.type} rate (Apr 2026). </span>
+                              <a href="https://www.finder.com.au/home-loans" target="_blank" rel="noopener noreferrer" style={{ color: '#1f3a2e', fontWeight: 600 }}>Find live rates on Finder →</a>
+                            </div>
+
+                            {hasResult ? (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+                                <div style={{ padding: '16px 20px', background: '#fae8d7', border: '1px solid #c47a3a' }}>
+                                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b3a14', marginBottom: 6 }}>Your current repayment</div>
+                                  <div className="display mono" style={{ fontSize: 26, fontWeight: 700, color: '#6b3a14' }}>{fmt(currentPayment)}<span style={{ fontSize: 13 }}>/mo</span></div>
+                                  <div className="mono" style={{ fontSize: 11, color: '#6b3a14', marginTop: 4 }}>at {mc.rate}%</div>
+                                </div>
+                                <div style={{ padding: '16px 20px', background: '#dfe8d8', border: '1px solid #2e5a3a' }}>
+                                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 6 }}>At comparison rate</div>
+                                  <div className="display mono" style={{ fontSize: 26, fontWeight: 700, color: '#2e5a3a' }}>{fmt(compPayment)}<span style={{ fontSize: 13 }}>/mo</span></div>
+                                  <div className="mono" style={{ fontSize: 11, color: '#2e5a3a', marginTop: 4 }}>at {compRateVal}%</div>
+                                </div>
+                                <div style={{ padding: '16px 20px', background: '#1f3a2e', border: '1px solid #1f3a2e', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#a8c4a0', marginBottom: 6 }}>You could save</div>
+                                  <div className="display mono" style={{ fontSize: 28, fontWeight: 700, color: '#f4efe6' }}>{fmt(monthlySaving)}<span style={{ fontSize: 13, opacity: 0.7 }}>/mo</span></div>
+                                  <div className="mono" style={{ fontSize: 12, color: '#a8c4a0', marginTop: 4 }}>{fmt(totalSaving)} over {mc.years} yrs</div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ padding: '20px', background: '#f4efe6', border: '1px dashed #d4ccba', textAlign: 'center', color: '#6b6758', fontSize: 14 }}>
+                                Fill in your loan details above to calculate your savings.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
