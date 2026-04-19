@@ -278,6 +278,138 @@ function findAlternative(description) {
   return null;
 }
 
+const CATEGORY_TARGET_REDUCTIONS = {
+  'Groceries': 0.15, 'Coffee': 0.50, 'Food Delivery': 0.50, 'Dining Out': 0.30,
+  'Rideshare': 0.25, 'Fuel': 0.10, 'Subscriptions': 0.40, 'Entertainment': 0.20,
+  'Shopping': 0.20, 'Alcohol': 0.25, 'Clothing': 0.20, 'Fitness': 0.10,
+  'Health & Fitness': 0.10, 'Buy Now Pay Later': 0.75, 'Gambling': 1.00,
+  'Snacks & Vending': 0.35, 'Bank Fees': 0.50, 'Other': 0.15,
+  'Personal Care': 0.15, 'Travel': 0.15, 'Parking & Tolls': 0.10,
+};
+
+const HOW_TO_GET_THERE = {
+  'Groceries': [
+    'Switch to Aldi for dry goods and staples — typically 15–25% cheaper than major chains',
+    'Plan meals for the week before you shop to cut impulse buys',
+    'Buy home-brand staples: flour, rice, pasta, oil, canned goods',
+  ],
+  'Coffee': [
+    'Brew at home on weekdays — a $6 café latte costs ~$0.50 at home',
+    'Limit café visits to weekends only, or one per week as a treat',
+    'A basic espresso machine pays for itself within a month',
+  ],
+  'Food Delivery': [
+    'Switch to pickup — delivery and service fees add 30–40% to every order',
+    'Cook in bulk on Sundays and freeze portions for busy nights',
+    'Keep a list of quick 15-minute meals for when you can\'t be bothered cooking',
+  ],
+  'Dining Out': [
+    'Set a once-a-week dining budget and stick to it',
+    'Cook 4–5 nights at home and reserve dining for social occasions',
+    'Use lunch specials and set menus — same restaurants, meaningfully lower prices',
+  ],
+  'Rideshare': [
+    'Use DiDi — consistently 15–25% cheaper than Uber on the same route',
+    'Combine rideshare with public transport for longer journeys',
+    'Check if a monthly transit pass would be cheaper than your weekly rideshare spend',
+  ],
+  'Fuel': [
+    'Use MotorMouth or GasBuddy to find the cheapest servo nearby',
+    'Fill up on Tuesdays or Wednesdays — typically the cheapest days in the price cycle',
+    'Combine errands into a single trip rather than multiple short journeys',
+  ],
+  'Subscriptions': [
+    'Rotate streaming services — binge one, cancel, switch to another next month',
+    'Use Spotify Family plan split across your household ($24/mo for up to 6 people)',
+    'Audit everything you\'re paying for and cancel anything unused in the last 30 days',
+  ],
+  'Entertainment': [
+    'Libraries offer free movies, books, and digital magazines through apps like Libby',
+    'Check community listings for free concerts, markets, and local festivals',
+    'Set a monthly entertainment cash allowance — spending physical money makes limits visible',
+  ],
+  'Shopping': [
+    'Apply a 48-hour rule before any non-essential purchase',
+    'Price-compare on Catch.com.au and eBay before buying — often 20–30% cheaper',
+    'Unsubscribe from retailer email lists to cut down temptation',
+  ],
+  'Alcohol': [
+    'Buy from bottle shops instead of venues — you\'re paying for location at a bar',
+    'Aldi award-winning wines are consistently cheaper than branded equivalents',
+    'Track your weekly drinks and set a hard unit and dollar budget',
+  ],
+  'Buy Now Pay Later': [
+    'Cancel BNPL accounts — they make future money feel like present money and inflate discretionary spend',
+    'Save up for purchases instead: you\'ll buy fewer things and appreciate them more',
+    'BNPL users spend 15–25% more on discretionary items per month on average',
+  ],
+  'Gambling': [
+    'Self-exclude via BetStop (betStop.com.au) to block all licensed Australian bookmakers at once',
+    'The house edge means every dollar wagered returns ~$0.90 on average over time',
+    'Free support: 1800 858 858 (Gambling Help Online) or gamblersanonymous.org.au',
+  ],
+  'Bank Fees': [
+    'Switch to a fee-free account — ING Orange Everyday, UP Bank, and HSBC Everyday Global charge nothing',
+    'Most banks waive fees if you meet a monthly deposit threshold — check yours',
+    'Set up automatic transfers to avoid overdraft and dishonour fees',
+  ],
+  'Snacks & Vending': [
+    'Keep snacks in your bag or desk drawer to avoid vending machine impulses',
+    'Meal-prep snack packs on Sundays: boiled eggs, fruit, and portioned nuts',
+    'Calculate your weekly vending spend — it adds up faster than most people expect',
+  ],
+  'Fitness': [
+    'Budget gyms (Plus Fitness, Anytime Fitness) offer 24/7 access for ~$15/wk vs $65+/wk at boutique studios',
+    'YouTube has free full-length yoga, HIIT, and strength programs',
+    'Negotiate your current membership — most gyms will match a competitor\'s price',
+  ],
+  'Health & Fitness': [
+    'Budget gyms offer 24/7 access for ~$15/wk vs $65+/wk at boutique studios',
+    'YouTube has free full-length yoga, HIIT, and strength training programs',
+    'Negotiate your current membership — most gyms will match a competitor\'s price',
+  ],
+  'Mortgage': [
+    'Call your lender and mention you\'re comparing rates — the retention team can usually beat their published rate',
+    'Even a 0.5% rate reduction on a $500k loan saves ~$150/mo — use the calculator in the previous section',
+    'Refinancing costs ~$500–$1,000 in fees but a better rate typically recovers that within 2 months',
+  ],
+  'Insurance': [
+    'Get comparison quotes on iSelect or Compare the Market at each renewal',
+    'Bundling home, contents, and car with one insurer often yields a 10–15% multi-policy discount',
+    'Increasing your excess lowers your premium — worthwhile if you have an emergency fund',
+  ],
+  'Phone & Internet': [
+    'Belong (Telstra network) and Amaysim (Optus network) offer the same coverage at roughly half the price',
+    'Compare NBN plans on WhistleOut — Aussie Broadband and Leaptel often undercut major providers',
+    'Check whether you\'re paying for more data than you use and downgrade your plan',
+  ],
+  'Utilities': [
+    'Compare energy providers on Energy Made Easy (the government comparison tool)',
+    'Switch to a controlled load tariff for hot water if your supplier offers one',
+    'LED globes and smart power strips cut standby consumption with no lifestyle change',
+  ],
+  'Transit': [
+    'A weekly or monthly pass is almost always cheaper than paying per trip',
+    'Check if your employer offers a commuter pre-tax transit benefit',
+    'Combine cycling for short legs of your commute with transit for longer ones',
+  ],
+  'Parking & Tolls': [
+    'Use Google Maps to route around tolls when time allows',
+    'Book parking in advance via apps like Wilson or Secure Parking — walk-up rates are 30–50% higher',
+    'Consider park-and-ride options if you commute into the CBD regularly',
+  ],
+  'Personal Care': [
+    'Compare prices on Chemist Warehouse vs supermarkets — identical products, different margins',
+    'Switch to home-brand toiletries for staples like shampoo, conditioner, and body wash',
+    'Space out salon visits by 2–4 weeks and learn basic maintenance at home',
+  ],
+  'Travel': [
+    'Book flights 6–8 weeks out on Tuesdays for the best fares',
+    'Use Google Flights fare tracker to get alerts when prices drop on routes you want',
+    'Consider off-peak travel dates — shoulder season is often 30–40% cheaper than peak school holidays',
+  ],
+};
+
 // ---------- Anomaly detection ----------
 // Extracts a "merchant key" — the identifying chunk of a description,
 // stripping store numbers, suburbs, transaction IDs, etc.
@@ -1864,56 +1996,28 @@ export default function App() {
         {/* ============ BUDGET VIEW ============ */}
         {view === 'budget' && analysis && (() => {
           const income = parseFloat(budgetIncome) || 0;
-          const setAlloc = (cat, val) => setBudgetAllocs(prev => ({ ...prev, [cat]: val }));
-          const totalAllocated = Object.values(budgetAllocs).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-          const unallocated = income - totalAllocated;
-          const isOver = unallocated < -0.5;
+          const SKIP_CATS = new Set(['Internal Transfers', 'Credit Card Payment']);
 
-          const cats = Object.entries(budgetAllocs)
-            .filter(([cat]) => cat !== '__savings__')
-            .map(([cat, val]) => ({
-              cat,
-              val,
-              isFixed: FIXED_BUDGET_CATS.has(cat),
-              current: analysis.monthlyByCategory[cat]?.monthlyTotal || 0,
-            }))
-            .sort((a, b) => {
-              if (a.isFixed && !b.isFixed) return -1;
-              if (!a.isFixed && b.isFixed) return 1;
-              return b.current - a.current;
-            });
+          const cats = Object.entries(analysis.monthlyByCategory)
+            .filter(([cat]) => !SKIP_CATS.has(cat))
+            .map(([cat, data]) => {
+              const current = data.monthlyTotal;
+              const reduction = CATEGORY_TARGET_REDUCTIONS[cat] ?? 0.10;
+              const benchmark = analysis.categoryBreakdown.find(c => c.category === cat)?.average;
+              const suggested = FIXED_BUDGET_CATS.has(cat)
+                ? current
+                : (benchmark && benchmark < current * (1 - reduction))
+                  ? benchmark
+                  : Math.max(0, current * (1 - reduction));
+              const saving = current - suggested;
+              return { cat, current, suggested: Math.round(suggested), saving: Math.round(saving), tips: HOW_TO_GET_THERE[cat] || null };
+            })
+            .sort((a, b) => b.saving - a.saving);
 
-          const inputStyle = { width: '100%', padding: '8px 10px', border: '1px solid #d4ccba', background: '#fff', fontSize: 14, fontFamily: 'JetBrains Mono, monospace', textAlign: 'right', outline: 'none', boxSizing: 'border-box' };
-
-          const Row = ({ cat, val, isFixed, current, label }) => {
-            const budgeted = parseFloat(val) || 0;
-            const diff = budgeted - current;
-            const diffColor = diff > 5 ? '#a04020' : diff < -5 ? '#2e5a3a' : '#6b6758';
-            return (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px', gap: 12, alignItems: 'center', padding: '12px 20px', borderTop: '1px solid #e8e1d0', background: isFixed ? '#faf6ee' : '#fff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {isFixed && <span className="mono" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', background: '#ebe4d5', color: '#6b6758', padding: '2px 6px' }}>Fixed</span>}
-                  <span style={{ fontSize: 15, fontWeight: isFixed ? 400 : 500 }}>{label || cat}</span>
-                </div>
-                <div className="mono" style={{ fontSize: 13, color: '#6b6758', textAlign: 'right' }}>
-                  {fmt(current)}<span style={{ fontSize: 11 }}>/mo</span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#6b6758', fontSize: 13, pointerEvents: 'none' }}>$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={val}
-                    onChange={e => setAlloc(cat, e.target.value)}
-                    style={{ ...inputStyle, paddingLeft: 22, background: isFixed ? '#faf6ee' : '#fff' }}
-                  />
-                </div>
-                <div className="mono" style={{ fontSize: 13, fontWeight: 600, color: diffColor, textAlign: 'right' }}>
-                  {diff === 0 ? '—' : (diff > 0 ? '+' : '') + fmt(Math.abs(diff))}
-                </div>
-              </div>
-            );
-          };
+          const totalCurrent = cats.reduce((s, c) => s + c.current, 0);
+          const totalSuggested = cats.reduce((s, c) => s + c.suggested, 0);
+          const totalSaving = totalCurrent - totalSuggested;
+          const savingsGoal = income > 0 ? Math.round(income * 0.2) : 0;
 
           return (
             <div className="fade-in">
@@ -1922,108 +2026,96 @@ export default function App() {
                   <ArrowLeft size={14} /> Results
                 </button>
                 <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>MY BUDGET</span>
-                <button
-                  onClick={() => {
-                    const allocs = { __savings__: Math.round((parseFloat(budgetIncome) || analysis.reliableMonthlyIncome) * 0.2) };
-                    for (const [cat, data] of Object.entries(analysis.monthlyByCategory)) {
-                      allocs[cat] = FIXED_BUDGET_CATS.has(cat)
-                        ? Math.round(data.monthlyTotal)
-                        : Math.max(0, Math.round(data.monthlyTotal * 0.9));
-                    }
-                    setBudgetAllocs(allocs);
-                  }}
-                  style={{ background: 'transparent', border: '1px solid rgba(244,239,230,0.4)', color: '#f4efe6', fontSize: 12, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                  Reset
-                </button>
+                <div style={{ width: 60 }} />
               </div>
 
-              <section style={{ marginBottom: 40 }}>
+              <section style={{ marginBottom: 48 }}>
                 <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Your new budget</h2>
-                <p style={{ color: '#6b6758', margin: '0 0 24px', fontSize: 15 }}>
-                  Built from your actual spending. Adjust any category — fixed costs are locked, everything else is yours to shape.
+                <p style={{ color: '#6b6758', margin: '0 0 28px', fontSize: 15 }}>
+                  Your current spending, what we suggest, and exactly how to get there.
                 </p>
 
-                {/* Income input */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'center', padding: '20px 24px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 4 }}>
-                  <div>
-                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 6 }}>Monthly take-home income</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 24 }}>$</span>
-                      <input
-                        type="number"
-                        value={budgetIncome}
-                        onChange={e => setBudgetIncome(e.target.value)}
-                        placeholder={Math.round(analysis.reliableMonthlyIncome) || '0'}
-                        style={{ background: 'transparent', border: 'none', borderBottom: '2px solid rgba(244,239,230,0.5)', color: '#f4efe6', fontSize: 36, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, width: 200, outline: 'none', padding: '4px 0' }}
-                      />
-                    </div>
-                    {analysis.reliableMonthlyIncome > 0 && (
-                      <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>Detected from your statement: {fmt(analysis.reliableMonthlyIncome)}/mo</div>
-                    )}
+                {/* Summary header */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 2, marginBottom: 40 }}>
+                  <div style={{ padding: '20px 24px', background: '#fae8d7', border: '1px solid #c47a3a' }}>
+                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b3a14', marginBottom: 8 }}>Current spending</div>
+                    <div className="display mono" style={{ fontSize: 30, fontWeight: 700, color: '#6b3a14' }}>{fmt(totalCurrent)}<span style={{ fontSize: 14 }}>/mo</span></div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 4 }}>
-                      {isOver ? 'Over by' : 'Unallocated'}
-                    </div>
-                    <div className="display mono" style={{ fontSize: 32, fontWeight: 700, color: isOver ? '#f4a460' : unallocated < 1 ? '#a8c4a0' : '#f4efe6' }}>
-                      {income > 0 ? (isOver ? '-' : '') + fmt(Math.abs(unallocated)) : '—'}
-                    </div>
-                    {income > 0 && !isOver && unallocated > 0.5 && (
-                      <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Move this to savings</div>
-                    )}
+                  <div style={{ padding: '20px 24px', background: '#dfe8d8', border: '1px solid #2e5a3a' }}>
+                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 8 }}>Suggested budget</div>
+                    <div className="display mono" style={{ fontSize: 30, fontWeight: 700, color: '#2e5a3a' }}>{fmt(totalSuggested)}<span style={{ fontSize: 14 }}>/mo</span></div>
                   </div>
+                  <div style={{ padding: '20px 24px', background: '#1f3a2e', color: '#f4efe6' }}>
+                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 8 }}>You'd free up</div>
+                    <div className="display mono" style={{ fontSize: 30, fontWeight: 700 }}>{fmt(totalSaving)}<span style={{ fontSize: 14, opacity: 0.7 }}>/mo</span></div>
+                    <div className="mono" style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>{fmt(totalSaving * 12)} per year</div>
+                  </div>
+                  {income > 0 && (
+                    <div style={{ padding: '20px 24px', background: '#ebe4d5', border: '1px solid #d4ccba' }}>
+                      <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 8 }}>20% savings goal</div>
+                      <div className="display mono" style={{ fontSize: 30, fontWeight: 700 }}>{fmt(savingsGoal)}<span style={{ fontSize: 14, color: '#6b6758' }}>/mo</span></div>
+                      <div className="mono" style={{ fontSize: 11, color: '#6b6758', marginTop: 4 }}>from {fmt(income)}/mo income</div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Progress bar */}
-                {income > 0 && (
-                  <div style={{ height: 6, background: '#e8e1d0', marginBottom: 32 }}>
-                    <div style={{ height: '100%', width: `${Math.min(100, (totalAllocated / income) * 100)}%`, background: isOver ? '#a04020' : '#1f3a2e', transition: 'width 0.2s, background 0.2s' }} />
-                  </div>
-                )}
+                {/* Category cards */}
+                <div style={{ display: 'grid', gap: 16 }}>
+                  {cats.map(({ cat, current, suggested, saving, tips }) => {
+                    const isFixed = FIXED_BUDGET_CATS.has(cat);
+                    const noSaving = saving < 2;
+                    return (
+                      <div key={cat} style={{ border: `1px solid ${noSaving ? '#d4ccba' : '#1f3a2e'}`, background: '#fff' }}>
+                        {/* Card header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e8e1d0', background: noSaving ? '#faf6ee' : '#fff' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            {isFixed && <span className="mono" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', background: '#ebe4d5', color: '#6b6758', padding: '2px 7px' }}>Committed</span>}
+                            <span className="display" style={{ fontSize: 20, fontWeight: 700 }}>{cat}</span>
+                          </div>
+                          {!noSaving && (
+                            <div style={{ background: '#1f3a2e', color: '#f4efe6', padding: '6px 14px', fontSize: 13, fontWeight: 600 }}>
+                              Save {fmt(saving)}/mo
+                            </div>
+                          )}
+                        </div>
 
-                {/* Column headers */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px', gap: 12, padding: '8px 20px', background: '#ebe4d5' }}>
-                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758' }}>Category</div>
-                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', textAlign: 'right' }}>Current</div>
-                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', textAlign: 'right' }}>Budget</div>
-                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', textAlign: 'right' }}>Change</div>
+                        {/* Numbers row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', borderBottom: tips ? '1px solid #e8e1d0' : 'none', flexWrap: 'wrap' }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div className="mono" style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 4 }}>Current</div>
+                            <div className="display mono" style={{ fontSize: 26, fontWeight: 700, color: '#a04020' }}>{fmt(current)}<span style={{ fontSize: 12, color: '#6b6758' }}>/mo</span></div>
+                          </div>
+                          <ArrowRight size={20} color="#6b6758" style={{ flexShrink: 0 }} />
+                          <div style={{ textAlign: 'center' }}>
+                            <div className="mono" style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 4 }}>Suggested</div>
+                            <div className="display mono" style={{ fontSize: 26, fontWeight: 700, color: noSaving ? '#6b6758' : '#2e5a3a' }}>{fmt(suggested)}<span style={{ fontSize: 12, color: '#6b6758' }}>/mo</span></div>
+                          </div>
+                          {!noSaving && (
+                            <>
+                              <div style={{ width: 1, height: 40, background: '#e8e1d0', flexShrink: 0 }} />
+                              <div>
+                                <div className="mono" style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 4 }}>Annual saving</div>
+                                <div className="display mono" style={{ fontSize: 20, fontWeight: 700, color: '#2e5a3a' }}>{fmt(saving * 12)}</div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* How to get there */}
+                        {tips && (
+                          <div style={{ padding: '16px 20px', background: '#faf6ee' }}>
+                            <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 10 }}>How to get there</div>
+                            <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
+                              {tips.map((tip, i) => (
+                                <li key={i} style={{ fontSize: 14, color: '#3a3d38', lineHeight: 1.5 }}>{tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {/* Savings row */}
-                <Row
-                  cat="__savings__"
-                  label="Savings goal"
-                  val={budgetAllocs.__savings__ ?? ''}
-                  isFixed={false}
-                  current={0}
-                />
-
-                {/* Spending categories */}
-                {cats.map(({ cat, val, isFixed, current }) => (
-                  <Row key={cat} cat={cat} val={val} isFixed={isFixed} current={current} />
-                ))}
-
-                {/* Summary footer */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px', gap: 12, padding: '16px 20px', background: '#1f3a2e', color: '#f4efe6', marginTop: 4 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>Total allocated</div>
-                  <div className="mono" style={{ fontSize: 14, textAlign: 'right', opacity: 0.6 }}>{income > 0 ? fmt(income) : '—'}</div>
-                  <div className="mono" style={{ fontSize: 14, fontWeight: 700, textAlign: 'right' }}>{fmt(totalAllocated)}</div>
-                  <div className="mono" style={{ fontSize: 14, fontWeight: 700, textAlign: 'right', color: isOver ? '#f4a460' : '#a8c4a0' }}>
-                    {income > 0 ? (isOver ? '-' : '+') + fmt(Math.abs(unallocated)) : '—'}
-                  </div>
-                </div>
-
-                {isOver && (
-                  <div style={{ padding: '14px 20px', background: '#fae8d7', border: '1px solid #c47a3a', color: '#6b3a14', fontSize: 14, marginTop: 8 }}>
-                    You're allocating <strong>{fmt(Math.abs(unallocated))}/mo more than your income</strong>. Reduce spending categories or update your income above.
-                  </div>
-                )}
-                {!isOver && income > 0 && unallocated > 0.5 && (
-                  <div style={{ padding: '14px 20px', background: '#dfe8d8', border: '1px solid #2e5a3a', color: '#1f3a2e', fontSize: 14, marginTop: 8 }}>
-                    You have <strong>{fmt(unallocated)}/mo unallocated</strong> — consider adding it to your savings goal.
-                  </div>
-                )}
               </section>
             </div>
           );
