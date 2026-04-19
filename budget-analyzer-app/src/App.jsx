@@ -846,6 +846,7 @@ export default function App() {
   const [mortgageCalc, setMortgageCalc] = useState({ principal: '', years: '', rate: '', type: 'variable', compRate: '' });
   const [budgetAllocs, setBudgetAllocs] = useState({});
   const [budgetIncome, setBudgetIncome] = useState('');
+  const [budgetCats, setBudgetCats] = useState([]);
   const [allRows, setAllRows] = useState([]);
   // User-assigned category overrides, keyed by merchantKey(description).
   // e.g. { 'sportsbet melbourne': 'Entertainment' }
@@ -860,7 +861,20 @@ export default function App() {
   // Whether we've finished loading from persistent storage (prevents saving
   // empty state over real data on initial mount)
   const [storageLoaded, setStorageLoaded] = useState(false);
+  const [isPaid, setIsPaid] = useState(() => localStorage.getItem('pinchy:paid') === 'true');
+  const [showExportModal, setShowExportModal] = useState(false);
   const fileRef = useRef();
+
+  // Check for Stripe payment success redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      localStorage.setItem('pinchy:paid', 'true');
+      setIsPaid(true);
+      window.history.replaceState({}, '', window.location.pathname);
+      setShowExportModal(true);
+    }
+  }, []);
 
   // Load saved categorisations from persistent storage on mount
   useEffect(() => {
@@ -948,6 +962,44 @@ export default function App() {
   };
 
   const FIXED_BUDGET_CATS = new Set(['Mortgage', 'Rent/Housing', 'Insurance', 'Utilities', 'Phone & Internet', 'Internal Transfers', 'Credit Card Payment']);
+
+  // Replace with your Stripe Payment Link — set success URL to redirect back here with ?payment=success
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/YOUR_LINK_HERE?success_url=' + encodeURIComponent(window.location.origin + window.location.pathname + '?payment=success');
+
+  const computeBudgetCats = (a) => {
+    if (!a) return [];
+    const SKIP = new Set(['Internal Transfers', 'Credit Card Payment']);
+    return Object.entries(a.monthlyByCategory)
+      .filter(([cat]) => !SKIP.has(cat))
+      .map(([cat, data]) => {
+        const current = data.monthlyTotal;
+        const reduction = CATEGORY_TARGET_REDUCTIONS[cat] ?? 0.10;
+        const benchmark = a.categoryBreakdown.find(c => c.category === cat)?.average;
+        const suggested = FIXED_BUDGET_CATS.has(cat)
+          ? current
+          : (benchmark && benchmark < current * (1 - reduction)) ? benchmark : Math.max(0, current * (1 - reduction));
+        const saving = current - suggested;
+        return { cat, current, suggested: Math.round(suggested), saving: Math.round(saving), tips: HOW_TO_GET_THERE[cat] || null };
+      })
+      .sort((a, b) => b.saving - a.saving);
+  };
+
+  const exportCSV = (cats) => {
+    const rows = [['Category', 'Current ($/mo)', 'Suggested ($/mo)', 'Saving ($/mo)', 'Saving ($/yr)']];
+    for (const { cat, current, suggested, saving } of cats) {
+      rows.push([cat, current.toFixed(2), suggested.toFixed(2), saving.toFixed(2), (saving * 12).toFixed(2)]);
+    }
+    const totalCurrent = cats.reduce((s, c) => s + c.current, 0);
+    const totalSuggested = cats.reduce((s, c) => s + c.suggested, 0);
+    const totalSaving = totalCurrent - totalSuggested;
+    rows.push(['TOTAL', totalCurrent.toFixed(2), totalSuggested.toFixed(2), totalSaving.toFixed(2), (totalSaving * 12).toFixed(2)]);
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'pinchy-budget.csv';
+    a.click();
+  };
 
   const goToBudget = () => {
     if (!analysis) return;
@@ -1517,23 +1569,7 @@ export default function App() {
         {/* ============ BUDGET VIEW ============ */}
         {view === 'budget' && analysis && (() => {
           const income = parseFloat(budgetIncome) || 0;
-          const SKIP_CATS = new Set(['Internal Transfers', 'Credit Card Payment']);
-
-          const cats = Object.entries(analysis.monthlyByCategory)
-            .filter(([cat]) => !SKIP_CATS.has(cat))
-            .map(([cat, data]) => {
-              const current = data.monthlyTotal;
-              const reduction = CATEGORY_TARGET_REDUCTIONS[cat] ?? 0.10;
-              const benchmark = analysis.categoryBreakdown.find(c => c.category === cat)?.average;
-              const suggested = FIXED_BUDGET_CATS.has(cat)
-                ? current
-                : (benchmark && benchmark < current * (1 - reduction))
-                  ? benchmark
-                  : Math.max(0, current * (1 - reduction));
-              const saving = current - suggested;
-              return { cat, current, suggested: Math.round(suggested), saving: Math.round(saving), tips: HOW_TO_GET_THERE[cat] || null };
-            })
-            .sort((a, b) => b.saving - a.saving);
+          const cats = computeBudgetCats(analysis);
 
           const totalCurrent = cats.reduce((s, c) => s + c.current, 0);
           const totalSuggested = cats.reduce((s, c) => s + c.suggested, 0);
@@ -1547,7 +1583,12 @@ export default function App() {
                   <ArrowLeft size={14} /> Results
                 </button>
                 <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>MY BUDGET</span>
-                <div style={{ width: 60 }} />
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  style={{ background: '#f4efe6', color: '#1f3a2e', border: 'none', padding: '6px 16px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  Export / Save
+                </button>
               </div>
 
               <section style={{ marginBottom: 48 }}>
@@ -1647,6 +1688,80 @@ export default function App() {
             </div>
           );
         })()}
+
+        {/* ============ EXPORT / PAYWALL MODAL ============ */}
+        {showExportModal && (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(26,31,26,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowExportModal(false); }}
+          >
+            <div style={{ background: '#f4efe6', maxWidth: 480, width: '100%', padding: 40, position: 'relative' }}>
+              <button
+                onClick={() => setShowExportModal(false)}
+                style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b6758', lineHeight: 1 }}
+              >×</button>
+
+              {isPaid ? (
+                <>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 8 }}>Export</div>
+                  <div className="display" style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Save your budget</div>
+                  <p style={{ fontSize: 14, color: '#6b6758', margin: '0 0 28px', lineHeight: 1.5 }}>
+                    Download your budget plan or print it as a PDF.
+                  </p>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <button
+                      onClick={() => { exportCSV(computeBudgetCats(analysis)); setShowExportModal(false); }}
+                      style={{ padding: '16px 24px', background: '#1f3a2e', color: '#f4efe6', border: 'none', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <span>Download as CSV</span>
+                      <span style={{ opacity: 0.7, fontSize: 13 }}>Opens in Excel / Sheets</span>
+                    </button>
+                    <button
+                      onClick={() => { setShowExportModal(false); setTimeout(() => window.print(), 100); }}
+                      style={{ padding: '16px 24px', background: '#fff', color: '#1f3a2e', border: '2px solid #1f3a2e', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <span>Print / Save as PDF</span>
+                      <span style={{ opacity: 0.6, fontSize: 13 }}>Use browser print dialog</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 8 }}>Unlock</div>
+                  <div className="display" style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, lineHeight: 1.1 }}>Export your budget plan</div>
+                  <p style={{ fontSize: 15, color: '#3a3d38', margin: '0 0 24px', lineHeight: 1.5 }}>
+                    One-time payment. Download your personalised budget as a CSV or PDF — yours to keep and use in any spreadsheet.
+                  </p>
+
+                  <div style={{ display: 'grid', gap: 10, marginBottom: 28 }}>
+                    {[
+                      'CSV export — opens in Excel, Google Sheets, or Numbers',
+                      'PDF / Print — clean, shareable one-page budget',
+                      'Yours forever — no subscription, no account required',
+                    ].map((feat, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 14, color: '#3a3d38' }}>
+                        <Check size={16} color="#2e5a3a" style={{ flexShrink: 0, marginTop: 2 }} />
+                        {feat}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => { window.location.href = STRIPE_PAYMENT_LINK; }}
+                    style={{ width: '100%', padding: '18px 24px', background: '#1f3a2e', color: '#f4efe6', border: 'none', fontSize: 17, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <span>Unlock for $4.99</span>
+                    <span style={{ opacity: 0.7, fontSize: 13 }}>One-time · Secure checkout</span>
+                  </button>
+
+                  <p style={{ fontSize: 12, color: '#6b6758', margin: 0, textAlign: 'center' }}>
+                    Powered by Stripe. Your card details never touch this site.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <footer style={{ marginTop: 80, paddingTop: 24, borderTop: '3px double #1f3a2e', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, fontSize: 12, color: '#6b6758' }}>
           <div className="mono" style={{ letterSpacing: '0.1em' }}>
