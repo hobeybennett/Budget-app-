@@ -2,6 +2,63 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Upload, FileText, TrendingUp, TrendingDown, Minus, X, Shield, ArrowRight, Check, Loader, ArrowLeft, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Zap } from 'lucide-react';
 import './storage.js';
 
+const TEST_CSV = `Date,Description,Debit,Credit,Balance
+01/03/2026,Opening Balance,,,5000.00
+01/03/2026,Direct Credit ACME PTY LTD Payroll,,3500.00,8500.00
+03/03/2026,P&I Payment Home Loan Repayment,2380.00,,6120.00
+05/03/2026,Sydney Water,55.00,,6065.00
+07/03/2026,Woolworths 1234 Chatswood,124.50,,5940.50
+10/03/2026,Telstra,80.00,,5860.50
+11/03/2026,Starbucks Collins St,8.50,,5852.00
+12/03/2026,Uber Eats,42.80,,5809.20
+14/03/2026,BP Petrol Station Lane Cove,82.00,,5727.20
+14/03/2026,Woolworths 1234 Chatswood,98.30,,5628.90
+15/03/2026,Direct Credit ACME PTY LTD Payroll,,3500.00,9128.90
+15/03/2026,AGL Energy,145.00,,8983.90
+17/03/2026,Netflix,22.99,,8960.91
+17/03/2026,Spotify,12.99,,8947.92
+18/03/2026,Thai Kitchen Restaurant,68.00,,8879.92
+19/03/2026,Coles Supermarket Artarmon,156.20,,8723.72
+20/03/2026,NRMA Insurance,185.00,,8538.72
+21/03/2026,Starbucks Collins St,8.50,,8530.22
+21/03/2026,Amazon AU,45.99,,8484.23
+22/03/2026,Translink Go Card,30.00,,8454.23
+24/03/2026,Woolworths 1234 Chatswood,112.40,,8341.83
+25/03/2026,Hungry Jacks Drive Thru,15.80,,8326.03
+26/03/2026,BP Petrol Station Lane Cove,78.50,,8247.53
+27/03/2026,Uber Eats,38.50,,8209.03
+28/03/2026,The Local Bistro,94.00,,8115.03
+29/03/2026,Direct Credit ACME PTY LTD Payroll,,3500.00,11615.03
+31/03/2026,Coles Supermarket Artarmon,88.90,,11526.13
+01/04/2026,Dan Murphy's,72.00,,11454.13
+03/04/2026,P&I Payment Home Loan Repayment,2380.00,,9074.13
+04/04/2026,Starbucks Collins St,8.50,,9065.63
+05/04/2026,Sydney Water,55.00,,9010.63
+07/04/2026,Woolworths 1234 Chatswood,138.60,,8872.03
+08/04/2026,Uber Trip,24.50,,8847.53
+10/04/2026,Telstra,80.00,,8767.53
+11/04/2026,Menulog,31.90,,8735.63
+12/04/2026,Direct Credit ACME PTY LTD Payroll,,3500.00,12235.63
+14/04/2026,BP Petrol Station Lane Cove,91.00,,12144.63
+15/04/2026,AGL Energy,145.00,,11999.63
+15/04/2026,NRMA Insurance,185.00,,11814.63
+16/04/2026,Netflix,22.99,,11791.64
+16/04/2026,Spotify,12.99,,11778.65
+17/04/2026,Coles Supermarket Artarmon,142.30,,11636.35
+18/04/2026,Starbucks Collins St,8.50,,11627.85
+19/04/2026,Thai Kitchen Restaurant,55.00,,11572.85
+21/04/2026,Woolworths 1234 Chatswood,104.70,,11468.15
+22/04/2026,Anytime Fitness,45.00,,11423.15
+23/04/2026,Translink Go Card,30.00,,11393.15
+24/04/2026,Uber Eats,52.30,,11340.85
+25/04/2026,Kmart Australia,87.50,,11253.35
+26/04/2026,Direct Credit ACME PTY LTD Payroll,,3500.00,14753.35
+26/04/2026,BP Petrol Station Lane Cove,84.00,,14669.35
+28/04/2026,The Local Bistro,78.00,,14591.35
+28/04/2026,Dan Murphy's,48.00,,14543.35
+29/04/2026,Woolworths 1234 Chatswood,119.80,,14423.55
+30/04/2026,Amazon AU,32.99,,14390.56
+30/04/2026,Starbucks Collins St,8.50,,14382.06`;
 
 // --- Australian merchant categorisation rules ---
 // Rule order matters — the FIRST matching rule wins. So specific patterns
@@ -1015,9 +1072,17 @@ export default function App() {
                   <div style={{ color: '#6b6758', marginBottom: 24, fontSize: 14, maxWidth: 480, marginLeft: 'auto', marginRight: 'auto' }}>
                     Works with CSV exports from CBA NetBank, Westpac, NAB, ANZ, ING, Macquarie, Bendigo, UBank, Up, Bankwest, and most other Australian banks and card issuers.
                   </div>
-                  <button className="btn-primary" onClick={() => fileRef.current?.click()}>
-                    Choose CSV
-                  </button>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn-primary" onClick={() => fileRef.current?.click()}>
+                      Choose CSV
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      onClick={() => handleFile(new File([TEST_CSV], 'test-budget.csv', { type: 'text/csv' }))}
+                    >
+                      Load test data
+                    </button>
+                  </div>
                   <input
                     ref={fileRef}
                     type="file"
