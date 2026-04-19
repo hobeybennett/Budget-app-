@@ -314,9 +314,9 @@ const HOW_TO_GET_THERE = {
     'Check if a monthly transit pass would be cheaper than your weekly rideshare spend',
   ],
   'Fuel': [
-    'Use MotorMouth or GasBuddy to find the cheapest servo nearby',
-    'Fill up on Tuesdays or Wednesdays — typically the cheapest days in the price cycle',
-    'Combine errands into a single trip rather than multiple short journeys',
+    'Use the 7-Eleven app\'s Fuel Lock — lock in a cheap price and redeem it at any 7-Eleven for up to 7 days',
+    'Swipe your Woolworths Everyday Rewards or Coles flybuys card every shop — both give 4c/L off at partner stations, and stack with docket discounts',
+    'Use MotorMouth or FuelCheck (NSW) to find the cheapest servo nearby, and fill up on Tuesdays or Wednesdays when prices typically bottom out',
   ],
   'Subscriptions': [
     'Rotate streaming services — binge one, cancel, switch to another next month',
