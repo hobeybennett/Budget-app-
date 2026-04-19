@@ -967,7 +967,7 @@ export default function App() {
   // In the link settings → After payment → set redirect to:
   //   https://hobeybennett.github.io/Budget-app-/?payment=success
   // Then paste your link ID below (the part after buy.stripe.com/)
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/YOUR_LINK_HERE';
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_5kQ7sEf5X1KQ85N78v43S01';
 
   const computeBudgetCats = (a) => {
     if (!a) return [];
