@@ -1073,44 +1073,61 @@ export default function App() {
 
   const DEFICIT_PLAYBOOK = [
     {
-      group: 'Boost your income',
-      color: '#1f3a2e',
+      step: 1,
+      label: 'Buy time & ease pressure',
+      timeframe: 'Do this week',
+      summary: 'Stop the bleeding before making bigger changes. These actions cost nothing and can take effect immediately.',
       items: [
-        { action: 'Pick up delivery shifts (Uber Eats, DoorDash, Menulog)', impact: '+$800–$1,400/mo', note: 'Weekends only, flexible hours. Most drivers clear $20–28/hr after costs.' },
-        { action: 'Register on Airtasker for odd jobs', impact: '+$500–$1,500/mo', note: 'Furniture assembly, removals, handyman, cleaning — highly variable but immediate.' },
-        { action: 'Rent out a spare room (long-term or Airbnb)', impact: '+$1,000–$1,800/mo', note: 'Long-term is lower hassle. Even one room changes the maths significantly.' },
-        { action: 'Ask for a pay review or take on overtime', impact: 'Varies', note: 'If you haven\'t had a raise in 12+ months, the current job market favours asking.' },
-        { action: 'Freelance your skills evenings/weekends', impact: '+$400–$2,000/mo', note: 'Upwork, Fiverr, or direct clients. Writing, design, dev, bookkeeping, tutoring.' },
+        { action: 'Call your bank\'s hardship team', impact: 'Immediate relief', note: 'Banks are legally required to help. Ask for a repayment pause, interest-only period, or fee waiver. 10-minute call.' },
+        { action: 'Sell unused items — Facebook Marketplace, eBay, Gumtree', impact: '$500–$2,000 one-off', note: 'Electronics, furniture, clothes, tools, sports gear. Most households have $1k+ sitting idle. Quick listings, cash in days.' },
+        { action: 'Cancel every non-essential subscription', impact: '+$50–$300/mo', note: 'Go through your bank statement line by line. Streaming, apps, gym, box deliveries. Cancel first, reconsider later.' },
+        { action: 'Switch to interest-only on your mortgage temporarily', impact: '+$400–$900/mo', note: 'Ask your lender — most will allow 12 months interest-only without refinancing. You\'re not saving, but you\'re surviving.' },
       ],
     },
     {
-      group: 'Sell or downsize assets',
-      color: '#3a2a0a',
+      step: 2,
+      label: 'Add a second income stream',
+      timeframe: 'Start within 2 weeks',
+      summary: 'The fastest way to close a large gap is earning more. These options are available to most people immediately.',
       items: [
-        { action: 'Sell a second vehicle', impact: '+$500–$1,200/mo', note: 'Rego, insurance, fuel, and servicing add up fast. One-car households save significantly.' },
-        { action: 'Downgrade your car', impact: '+$200–$600/mo', note: 'Selling a financed car and buying outright eliminates the repayment entirely.' },
-        { action: 'Rent out your car when not in use (Car Next Door)', impact: '+$300–$800/mo', note: 'Insured via the platform. Works well if the car sits idle during work hours.' },
-        { action: 'Sell shares or managed fund holdings', impact: 'One-off', note: 'Buys time but reduces future wealth. CGT may apply — consider timing.' },
-        { action: 'Downsize to a smaller home or cheaper suburb', impact: '+$500–$2,000/mo', note: 'Extreme but the most powerful lever. Worth modelling if you\'re consistently in deficit.' },
+        { action: 'Pick up delivery shifts (Uber Eats, DoorDash, Menulog)', impact: '+$800–$1,400/mo', note: 'Sign up takes a few days. Weekends only gives you $600–$900. Full part-time effort reaches $1,400+. Most drivers clear $20–28/hr after costs.' },
+        { action: 'Register on Airtasker', impact: '+$500–$1,500/mo', note: 'Removals, furniture assembly, handyman, cleaning, gardening. Flexible, immediate, and often better paid than delivery.' },
+        { action: 'Freelance your skills online', impact: '+$400–$2,000/mo', note: 'Upwork, Fiverr, or direct clients. Writing, design, dev, bookkeeping, tutoring, VA work. Start with one client.' },
+        { action: 'Take on overtime or a pay review at your current job', impact: 'Varies', note: 'If you haven\'t had a raise in 12+ months, now is the time to ask. A 5% raise on a $90k salary is $375/mo after tax.' },
       ],
     },
     {
-      group: 'Quick cash (buys time)',
-      color: '#2a1a3a',
+      step: 3,
+      label: 'Restructure your biggest costs',
+      timeframe: 'Within 4 weeks',
+      summary: 'Your mortgage, car, and housing costs likely represent 60–70% of your spending. Small changes here have the biggest impact.',
       items: [
-        { action: 'Sell unused items on Facebook Marketplace', impact: '$300–$2,000 one-off', note: 'Electronics, furniture, clothes, tools, sports gear. Most households have $1k+ sitting idle.' },
-        { action: 'Sell on eBay or Gumtree', impact: '$200–$1,500 one-off', note: 'Better prices than cash converters. Collectibles, tech, and brand clothing sell fast.' },
-        { action: 'Cash Converters / Music Swop Shop for instruments or tools', impact: '$100–$800 one-off', note: 'Instant cash but low return. Use as a last resort for genuinely unused items.' },
+        { action: 'Refinance your mortgage', impact: '+$200–$800/mo', note: 'Even 0.5% lower on a $600k loan saves ~$250/mo. A broker costs you nothing — they\'re paid by the bank. Get 3 quotes.' },
+        { action: 'Take in a housemate', impact: '+$800–$1,500/mo', note: 'The single fastest ongoing income change. Even 6 months of a housemate can reset the balance sheet.' },
+        { action: 'Rent out your car when not in use (Car Next Door)', impact: '+$300–$800/mo', note: 'Insured through the platform. Works especially well if your car sits idle during work hours.' },
+        { action: 'Consolidate high-interest debt into your mortgage or a personal loan', impact: '+$100–$500/mo', note: 'Credit card debt at 20%+ is crushing cash flow. Rolling it into lower-rate debt frees up cash immediately.' },
       ],
     },
     {
-      group: 'Restructure debt and housing',
-      color: '#1a1f1a',
+      step: 4,
+      label: 'Sell or downsize assets',
+      timeframe: '1–3 months',
+      summary: 'If the deficit persists, the asset side of the ledger needs a hard look. These are significant decisions but have major impact.',
       items: [
-        { action: 'Refinance your mortgage to a lower rate', impact: '+$200–$800/mo', note: 'Even 0.5% lower on a $600k loan saves ~$250/mo. Get a broker to check — free service.' },
-        { action: 'Contact your bank\'s hardship team', impact: 'Temporary relief', note: 'Banks are legally required to assist. Repayment pauses, interest-only periods, fee waivers.' },
-        { action: 'Consolidate high-interest debt', impact: '+$100–$400/mo', note: 'Rolling credit card debt into your mortgage or a personal loan at lower rate reduces cash drain.' },
-        { action: 'Take in a housemate', impact: '+$800–$1,500/mo', note: 'The single fastest income change. Even 6 months of a housemate can reset the balance sheet.' },
+        { action: 'Sell a second vehicle', impact: '+$500–$1,200/mo', note: 'Rego, insurance, fuel, and servicing on a second car typically costs $600–$1,000/mo all-in. One car is liveable for most households.' },
+        { action: 'Downgrade your car', impact: '+$200–$600/mo', note: 'Selling a financed car and buying a cheap runabout outright eliminates the loan repayment entirely.' },
+        { action: 'Sell shares, ETFs or managed fund holdings', impact: 'One-off injection', note: 'Buys time but reduces future wealth. CGT may apply — consider timing. Talk to an accountant first.' },
+      ],
+    },
+    {
+      step: 5,
+      label: 'Make a structural change',
+      timeframe: '3–6 months',
+      summary: 'If you\'re still in deficit after steps 1–4, the budget requires a structural reset. These decisions are hard but permanent.',
+      items: [
+        { action: 'Move to a cheaper suburb or downsize your home', impact: '+$500–$2,000/mo', note: 'Extreme but the most powerful lever available. A $200k cheaper home at 6% saves $1,000/mo in repayments alone.' },
+        { action: 'Change jobs for a higher salary', impact: 'Varies', note: 'Job switches typically yield 10–20% pay increases vs 2–3% internal raises. If you\'re underpaid, the market will pay you more.' },
+        { action: 'Speak to a free financial counsellor', impact: 'Clarity + plan', note: 'National Debt Helpline: 1800 007 007. Free, confidential, non-judgmental. They\'ve seen everything and can negotiate with creditors on your behalf.' },
       ],
     },
   ];
@@ -2092,27 +2109,38 @@ export default function App() {
                         </p>
                       </div>
 
-                      {DEFICIT_PLAYBOOK.map(({ group, color, items }) => (
-                        <div key={group} style={{ marginBottom: 24 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                            <div style={{ width: 12, height: 12, background: color, flexShrink: 0 }} />
-                            <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', fontWeight: 600 }}>{group}</div>
-                          </div>
-                          <div style={{ display: 'grid', gap: 8 }}>
-                            {items.map((item, i) => (
-                              <div key={i} style={{ background: '#fff', border: '1px solid #e8e1d0', padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
-                                <div>
-                                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{item.action}</div>
-                                  <div style={{ fontSize: 13, color: '#6b6758', lineHeight: 1.5 }}>{item.note}</div>
-                                </div>
-                                <div style={{ background: color, color: '#f4efe6', padding: '6px 12px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', alignSelf: 'start', fontFamily: 'inherit' }}>
-                                  {item.impact}
-                                </div>
+                      <div style={{ display: 'grid', gap: 0 }}>
+                        {DEFICIT_PLAYBOOK.map(({ step, label, timeframe, summary, items }, si) => (
+                          <div key={step} style={{ display: 'grid', gridTemplateColumns: '48px 1fr', gap: '0 20px' }}>
+                            {/* Step spine */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: step === 1 ? '#2d1a0e' : '#1f3a2e', color: '#f4efe6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>{step}</div>
+                              {si < DEFICIT_PLAYBOOK.length - 1 && (
+                                <div style={{ width: 2, flex: 1, background: '#d6cfc4', margin: '4px 0' }} />
+                              )}
+                            </div>
+                            {/* Step content */}
+                            <div style={{ paddingBottom: 32 }}>
+                              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: step === 1 ? '#b5451b' : '#2e5a3a', marginBottom: 4 }}>{timeframe}</div>
+                              <div className="display" style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{label}</div>
+                              <p style={{ fontSize: 13, color: '#6b6758', margin: '0 0 14px', lineHeight: 1.5 }}>{summary}</p>
+                              <div style={{ display: 'grid', gap: 8 }}>
+                                {items.map((item, i) => (
+                                  <div key={i} style={{ background: '#fff', border: '1px solid #e8e1d0', padding: '14px 18px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
+                                    <div>
+                                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{item.action}</div>
+                                      <div style={{ fontSize: 13, color: '#6b6758', lineHeight: 1.5 }}>{item.note}</div>
+                                    </div>
+                                    <div style={{ background: step === 1 ? '#2d1a0e' : '#1f3a2e', color: '#f4efe6', padding: '5px 10px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', alignSelf: 'start', fontFamily: 'inherit', letterSpacing: '0.02em' }}>
+                                      {item.impact}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </section>
                   );
                 })()}
