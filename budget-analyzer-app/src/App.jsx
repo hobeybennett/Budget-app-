@@ -892,6 +892,10 @@ export default function App() {
 
   // Supabase auth state
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [view]);
+
+  useEffect(() => {
     if (!supabase) { setAuthLoading(false); return; } // supabase always set, but guard kept for safety
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
