@@ -839,6 +839,7 @@ export default function App() {
   const [view, setView] = useState('upload'); // 'upload' | 'results' | 'budget'
   const [transactions, setTransactions] = useState([]);
   const [fileName, setFileName] = useState('');
+  const [fileNames, setFileNames] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rawLines, setRawLines] = useState([]);
@@ -944,46 +945,61 @@ export default function App() {
     })();
   }, [overrides, customCategories, storageLoaded]);
 
-  const handleFile = async (file) => {
+  const handleFiles = async (newFiles, existingTransactions = []) => {
     setError('');
     setLoading(true);
-    setTransactions([]);
-    setColumnMap(null);
-    try {
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-      setRawLines(lines);
+    const parsed = [];
+    const errors = [];
 
-      const result = parseCSV(text);
-      if (result.error) {
-        setError(result.error);
-        setLoading(false);
-        return;
+    for (const file of newFiles) {
+      try {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (newFiles.length === 1) setRawLines(lines);
+
+        const result = parseCSV(text);
+        if (result.error) { errors.push(`${file.name}: ${result.error}`); continue; }
+        if (result.transactions.length === 0) { errors.push(`${file.name}: no transactions found`); continue; }
+
+        if (parsed.length === 0 && existingTransactions.length === 0) {
+          setColumnMap(result.columnMap);
+          setAllRows(result.allRows);
+        }
+        parsed.push({ name: file.name, txns: result.transactions });
+      } catch (err) {
+        errors.push(`${file.name}: ${err.message || err}`);
       }
-      setColumnMap(result.columnMap);
-      setAllRows(result.allRows);
+    }
 
-      // Don't call normalizeSigns — CSVs have authoritative signs from the bank
-      // (either via a signed amount column, or separate debit/credit columns).
-      // normalizeSigns was designed for PDF parsing of credit card statements.
-      const normalized = result.transactions;
+    if (errors.length) setError(errors.join('\n'));
 
-      if (normalized.length === 0) {
-        setError('No transactions could be parsed from this CSV. Check that the columns include a date, description, and amount (or debit/credit).');
-      } else {
-        setTransactions(normalized);
-      }
-      setFileName(file.name);
-    } catch (err) {
-      console.error(err);
-      setError('Could not read this CSV file. Error: ' + (err.message || err));
+    const allTxns = [...existingTransactions, ...parsed.flatMap(p => p.txns)];
+    // Deduplicate by date + description + amount (catches same-account multi-month uploads)
+    const seen = new Set();
+    const deduped = allTxns.filter(t => {
+      const key = `${t.date}|${t.description}|${t.amount}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    deduped.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (deduped.length > 0) {
+      setTransactions(deduped);
+      const names = [...fileNames, ...parsed.map(p => p.name)];
+      setFileNames(names);
+      setFileName(names.length === 1 ? names[0] : `${names.length} files`);
     }
     setLoading(false);
   };
 
+  // Keep old single-file handler for the test data button
+  const handleFile = (file) => handleFiles([file]);
+
   const reset = () => {
     setTransactions([]);
     setFileName('');
+    setFileNames([]);
     setError('');
     setRawLines([]);
     setShowRaw(false);
@@ -1608,17 +1624,17 @@ export default function App() {
                   onDrop={(e) => {
                     e.preventDefault();
                     e.currentTarget.classList.remove('drag');
-                    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+                    if (e.dataTransfer.files.length) handleFiles(Array.from(e.dataTransfer.files));
                   }}
                 >
                   <Upload size={32} color="#1f3a2e" style={{ marginBottom: 16 }} />
-                  <div className="display" style={{ fontSize: 28, marginBottom: 8 }}>Drop a CSV statement</div>
+                  <div className="display" style={{ fontSize: 28, marginBottom: 8 }}>Drop CSV statements here</div>
                   <div style={{ color: '#6b6758', marginBottom: 24, fontSize: 14, maxWidth: 480, marginLeft: 'auto', marginRight: 'auto' }}>
-                    Works with CSV exports from CBA NetBank, Westpac, NAB, ANZ, ING, Macquarie, Bendigo, UBank, Up, Bankwest, and most other Australian banks and card issuers.
+                    Drop multiple files at once — transactions are merged and deduplicated automatically. Works with CBA, Westpac, NAB, ANZ, ING, Macquarie, Up, Bankwest and more.
                   </div>
                   <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
                     <button className="btn-primary" onClick={() => fileRef.current?.click()}>
-                      Choose CSV
+                      Choose CSV files
                     </button>
                     <button
                       className="btn-ghost"
@@ -1631,8 +1647,9 @@ export default function App() {
                     ref={fileRef}
                     type="file"
                     accept=".csv,.txt,text/csv"
+                    multiple
                     style={{ display: 'none' }}
-                    onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])}
+                    onChange={(e) => e.target.files.length && handleFiles(Array.from(e.target.files))}
                   />
                 </div>
 
@@ -1668,32 +1685,58 @@ export default function App() {
                 </div>
               </>
             ) : (
-              // Statement uploaded successfully — show summary + Analyse button
+              // Statement(s) uploaded successfully — show summary + Analyse button
               <div className="slide-in" style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 32 }}>
                   <Check size={18} />
-                  <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>STATEMENT PARSED</span>
+                  <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>{fileNames.length > 1 ? `${fileNames.length} FILES MERGED` : 'STATEMENT PARSED'}</span>
                 </div>
 
                 <div className="display" style={{ fontSize: 20, color: '#6b6758', marginBottom: 8, fontStyle: 'italic' }}>
-                  Found in your statement
+                  {fileNames.length > 1 ? 'Transactions across all files' : 'Found in your statement'}
                 </div>
                 <div className="display mono" style={{ fontSize: 72, fontWeight: 700, lineHeight: 1, marginBottom: 8, letterSpacing: '-0.03em' }}>
                   {transactions.length}
                 </div>
-                <div className="display" style={{ fontSize: 24, color: '#3a3d38', marginBottom: 48 }}>
-                  transactions from <em>{fileName}</em>
+                <div className="display" style={{ fontSize: 20, color: '#3a3d38', marginBottom: 24 }}>
+                  transactions
                 </div>
 
-                <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
+                {/* File chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 32 }}>
+                  {fileNames.map((n, i) => (
+                    <span key={i} className="mono" style={{ background: '#e8e1d0', padding: '4px 12px', fontSize: 12, color: '#3a3d38', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <FileText size={12} />{n}
+                    </span>
+                  ))}
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    className="mono"
+                    style={{ background: 'none', border: '1px dashed #8a8578', padding: '4px 12px', fontSize: 12, color: '#6b6758', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    + Add another file
+                  </button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".csv,.txt,text/csv"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files.length) handleFiles(Array.from(e.target.files), transactions);
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
                   <button className="btn-analyse" onClick={() => setView('results')}>
                     Analyse Spending <ArrowRight size={20} />
                   </button>
                   <button className="btn-ghost" onClick={reset}>
-                    Upload a different file
+                    Start over
                   </button>
                 </div>
-
               </div>
             )}
           </div>
