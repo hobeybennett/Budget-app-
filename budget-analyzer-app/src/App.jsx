@@ -1561,7 +1561,7 @@ export default function App() {
           ];
           const currentIdx = steps.findIndex(s => s.key === view);
           return (
-            <div className="stepper-pad" style={{ display: 'flex', alignItems: 'center', padding: '24px 40px', borderBottom: '1px solid #d6cfc4' }}>
+            <div className="stepper-pad" style={{ display: 'flex', alignItems: 'center', padding: '24px 40px', borderBottom: '1px solid #d6cfc4', background: '#f4efe6', position: 'sticky', top: 56, zIndex: 99 }}>
               {steps.map((step, i) => {
                 const done = i < currentIdx;
                 const active = i === currentIdx;
