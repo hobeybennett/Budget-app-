@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Upload, FileText, TrendingUp, TrendingDown, Minus, X, Shield, ArrowRight, Check, Loader, ArrowLeft, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Zap, LogOut, User, PlusCircle, FolderOpen, Settings as SettingsIcon, Trash2 } from 'lucide-react';
+import { Upload, FileText, TrendingUp, TrendingDown, Minus, X, Shield, ArrowRight, Check, Loader, ArrowLeft, ArrowDownCircle, ArrowUpCircle, AlertTriangle, Zap, LogOut, User, PlusCircle, FolderOpen, Settings as SettingsIcon, Trash2, Menu } from 'lucide-react';
 import './storage.js';
 import { supabase } from './supabase.js';
 
@@ -877,6 +877,7 @@ export default function App() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [loadedCats, setLoadedCats] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check for Stripe payment success redirect
   useEffect(() => {
@@ -1406,20 +1407,36 @@ export default function App() {
         .dropzone.drag { border-color: #1f3a2e; background: #ebe4d5; }
         .btn-analyse { background: #1f3a2e; color: #f4efe6; border: none; padding: 20px 40px; font-size: 18px; font-weight: 500; letter-spacing: 0.05em; transition: all 0.2s; display: inline-flex; align-items: center; gap: 12px; }
         .btn-analyse:hover { background: #0f2a1e; transform: translateY(-1px); }
+        .nav-desktop { display: flex; align-items: center; gap: 4; flex: 1; }
+        .nav-desktop-auth { display: block; }
+        .nav-mobile-btn { display: none !important; }
+        @media (max-width: 680px) {
+          .nav-desktop { display: none !important; }
+          .nav-desktop-auth { display: none !important; }
+          .nav-mobile-btn { display: flex !important; }
+          .page-pad { padding: 20px 16px 60px !important; }
+          .hero-title { font-size: 36px !important; }
+          .stepper-pad { padding: 16px !important; }
+          .stepper-label { display: none !important; }
+          .tile-grid { grid-template-columns: 1fr 1fr !important; }
+          .budget-nav-label { display: none !important; }
+        }
       `}</style>
 
       {/* ============ TOP NAV ============ */}
-      <nav style={{ background: '#1f3a2e', color: '#f4efe6', padding: '0 32px', display: 'flex', alignItems: 'center', height: 56, gap: 32, position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav style={{ background: '#1f3a2e', color: '#f4efe6', padding: '0 20px', display: 'flex', alignItems: 'center', height: 56, position: 'sticky', top: 0, zIndex: 100 }}>
+        {/* Logo */}
         <button
-          onClick={() => { setView('upload'); setLoadedCats(null); }}
+          onClick={() => { setView('upload'); setLoadedCats(null); setMobileMenuOpen(false); }}
           className="display"
           style={{ fontSize: 22, fontWeight: 700, color: '#f4efe6', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '-0.02em', flexShrink: 0 }}
         >
           Pinchy
         </button>
 
+        {/* Desktop nav links */}
         {user && (
-          <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+          <div className="nav-desktop" style={{ marginLeft: 8 }}>
             {[
               { label: 'Create Budget', icon: <PlusCircle size={14} />, action: () => { setView('upload'); setLoadedCats(null); } },
               { label: 'My Budgets', icon: <FolderOpen size={14} />, action: () => { setView('budgets'); loadBudgets(); } },
@@ -1439,12 +1456,13 @@ export default function App() {
           </div>
         )}
 
-        <div style={{ marginLeft: 'auto', position: 'relative' }}>
+        {/* Desktop auth */}
+        <div className="nav-desktop-auth" style={{ marginLeft: 'auto', position: 'relative' }}>
           {authLoading ? null : user ? (
             <>
               <button
                 onClick={() => setUserMenuOpen(o => !o)}
-                style={{ background: 'none', border: '1px solid rgba(244,239,230,0.3)', color: '#f4efe6', padding: '6px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 4 }}
+                style={{ background: 'none', border: '1px solid rgba(244,239,230,0.3)', color: '#f4efe6', padding: '6px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8, borderRadius: 4 }}
               >
                 <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#2e5a3a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
                   {(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}
@@ -1455,36 +1473,71 @@ export default function App() {
               </button>
               {userMenuOpen && (
                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#f4efe6', border: '1px solid #d6cfc4', minWidth: 180, zIndex: 200 }}>
-                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #e8e1d0', fontSize: 12, color: '#6b6758' }} className="mono">
-                    {user.email}
-                  </div>
-                  <button
-                    onClick={signOut}
-                    style={{ width: '100%', padding: '12px 16px', background: 'none', border: 'none', color: '#1a1f1a', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
-                  >
+                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #e8e1d0', fontSize: 12, color: '#6b6758' }} className="mono">{user.email}</div>
+                  <button onClick={signOut} style={{ width: '100%', padding: '12px 16px', background: 'none', border: 'none', color: '#1a1f1a', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <LogOut size={14} color="#6b6758" /> Sign out
                   </button>
                 </div>
               )}
             </>
           ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="mono"
-              style={{ background: 'transparent', border: '1px solid rgba(244,239,230,0.5)', color: '#f4efe6', padding: '8px 18px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
+            <button onClick={() => setShowAuthModal(true)} className="mono" style={{ background: 'transparent', border: '1px solid rgba(244,239,230,0.5)', color: '#f4efe6', padding: '8px 18px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: 'inherit' }}>
               Sign In
             </button>
           )}
         </div>
+
+        {/* Mobile right: avatar + hamburger */}
+        <div className="nav-mobile-btn" style={{ marginLeft: 'auto', alignItems: 'center', gap: 10 }}>
+          {user && (
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#2e5a3a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
+              {(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}
+            </div>
+          )}
+          <button
+            onClick={() => setMobileMenuOpen(o => !o)}
+            style={{ background: 'none', border: 'none', color: '#f4efe6', padding: 6, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          >
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div style={{ position: 'absolute', top: 56, left: 0, right: 0, background: '#1a2e22', borderTop: '1px solid rgba(255,255,255,0.08)', zIndex: 200 }}>
+            {user ? (
+              <>
+                {[
+                  { label: 'Create Budget', icon: <PlusCircle size={16} />, action: () => { setView('upload'); setLoadedCats(null); setMobileMenuOpen(false); } },
+                  { label: 'My Budgets', icon: <FolderOpen size={16} />, action: () => { setView('budgets'); loadBudgets(); setMobileMenuOpen(false); } },
+                  { label: 'Settings', icon: <SettingsIcon size={16} />, action: () => { setView('settings'); setMobileMenuOpen(false); } },
+                ].map(({ label, icon, action }) => (
+                  <button key={label} onClick={action} style={{ width: '100%', padding: '16px 20px', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#f4efe6', fontSize: 15, fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                    {icon}{label}
+                  </button>
+                ))}
+                <div style={{ padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="mono" style={{ fontSize: 11, color: 'rgba(244,239,230,0.4)', letterSpacing: '0.05em' }}>{user.email}</div>
+                </div>
+                <button onClick={() => { signOut(); setMobileMenuOpen(false); }} style={{ width: '100%', padding: '16px 20px', background: 'none', border: 'none', color: 'rgba(244,239,230,0.7)', fontSize: 15, fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                  <LogOut size={16} /> Sign out
+                </button>
+              </>
+            ) : (
+              <button onClick={() => { setShowAuthModal(true); setMobileMenuOpen(false); }} style={{ width: '100%', padding: '18px 20px', background: 'none', border: 'none', color: '#f4efe6', fontSize: 15, fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                <User size={16} /> Sign In
+              </button>
+            )}
+          </div>
+        )}
       </nav>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 80px' }}>
+      <div className="page-pad" style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px 80px' }}>
         {/* Hero — only on upload view */}
         {view === 'upload' && (
           <header style={{ borderBottom: '3px double #1f3a2e', paddingBottom: 24, marginBottom: 40 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
-              <h1 className="display" style={{ fontSize: 56, fontWeight: 900, margin: 0, lineHeight: 1 }}>Pinchy</h1>
+              <h1 className="display hero-title" style={{ fontSize: 56, fontWeight: 900, margin: 0, lineHeight: 1 }}>Pinchy</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#6b6758' }}>
                 <Shield size={14} /> <span className="mono" style={{ letterSpacing: '0.1em' }}>PROCESSED ON-DEVICE</span>
               </div>
@@ -1504,7 +1557,7 @@ export default function App() {
           ];
           const currentIdx = steps.findIndex(s => s.key === view);
           return (
-            <div style={{ display: 'flex', alignItems: 'center', padding: '24px 40px', borderBottom: '1px solid #d6cfc4' }}>
+            <div className="stepper-pad" style={{ display: 'flex', alignItems: 'center', padding: '24px 40px', borderBottom: '1px solid #d6cfc4' }}>
               {steps.map((step, i) => {
                 const done = i < currentIdx;
                 const active = i === currentIdx;
@@ -1520,7 +1573,7 @@ export default function App() {
                       }}>
                         {done ? <Check size={13} /> : i + 1}
                       </div>
-                      <span className="mono" style={{
+                      <span className="mono stepper-label" style={{
                         fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
                         color: active ? '#1f3a2e' : done ? '#1f3a2e' : '#b0a898',
                         fontWeight: active ? 700 : 500,
