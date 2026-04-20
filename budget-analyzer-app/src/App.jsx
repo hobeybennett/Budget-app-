@@ -1562,6 +1562,7 @@ export default function App() {
           .stepper-label { display: none !important; }
           .tile-grid { grid-template-columns: 1fr 1fr !important; }
           .budget-nav-label { display: none !important; }
+          .salary-form { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -2216,7 +2217,7 @@ export default function App() {
                   </div>
 
                   <div style={{ background: '#fff', border: '1px solid #e8e1d0', padding: 24, marginBottom: 16 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div className="salary-form" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                       <div>
                         <label className="mono" style={{ display: 'block', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Your job title</label>
                         <input
