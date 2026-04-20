@@ -2216,7 +2216,7 @@ export default function App() {
                   </div>
 
                   <div style={{ background: '#fff', border: '1px solid #e8e1d0', padding: 24, marginBottom: 16 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                       <div>
                         <label className="mono" style={{ display: 'block', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Your job title</label>
                         <input
@@ -2255,9 +2255,11 @@ export default function App() {
                           style={{ width: '100%', border: '1px solid #d6cfc4', background: '#faf6ee', padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
+                    </div>
+                    <div>
                       <button
                         onClick={checkSalary}
-                        style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '10px 20px', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', height: 42 }}
+                        style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '12px 28px', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
                       >
                         Check Market
                       </button>
