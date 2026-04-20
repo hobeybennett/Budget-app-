@@ -1071,6 +1071,50 @@ export default function App() {
 
   const FIXED_BUDGET_CATS = new Set(['Mortgage', 'Rent/Housing', 'Insurance', 'Utilities', 'Phone & Internet', 'Internal Transfers', 'Credit Card Payment']);
 
+  const DEFICIT_PLAYBOOK = [
+    {
+      group: 'Boost your income',
+      color: '#1f3a2e',
+      items: [
+        { action: 'Pick up delivery shifts (Uber Eats, DoorDash, Menulog)', impact: '+$800–$1,400/mo', note: 'Weekends only, flexible hours. Most drivers clear $20–28/hr after costs.' },
+        { action: 'Register on Airtasker for odd jobs', impact: '+$500–$1,500/mo', note: 'Furniture assembly, removals, handyman, cleaning — highly variable but immediate.' },
+        { action: 'Rent out a spare room (long-term or Airbnb)', impact: '+$1,000–$1,800/mo', note: 'Long-term is lower hassle. Even one room changes the maths significantly.' },
+        { action: 'Ask for a pay review or take on overtime', impact: 'Varies', note: 'If you haven\'t had a raise in 12+ months, the current job market favours asking.' },
+        { action: 'Freelance your skills evenings/weekends', impact: '+$400–$2,000/mo', note: 'Upwork, Fiverr, or direct clients. Writing, design, dev, bookkeeping, tutoring.' },
+      ],
+    },
+    {
+      group: 'Sell or downsize assets',
+      color: '#3a2a0a',
+      items: [
+        { action: 'Sell a second vehicle', impact: '+$500–$1,200/mo', note: 'Rego, insurance, fuel, and servicing add up fast. One-car households save significantly.' },
+        { action: 'Downgrade your car', impact: '+$200–$600/mo', note: 'Selling a financed car and buying outright eliminates the repayment entirely.' },
+        { action: 'Rent out your car when not in use (Car Next Door)', impact: '+$300–$800/mo', note: 'Insured via the platform. Works well if the car sits idle during work hours.' },
+        { action: 'Sell shares or managed fund holdings', impact: 'One-off', note: 'Buys time but reduces future wealth. CGT may apply — consider timing.' },
+        { action: 'Downsize to a smaller home or cheaper suburb', impact: '+$500–$2,000/mo', note: 'Extreme but the most powerful lever. Worth modelling if you\'re consistently in deficit.' },
+      ],
+    },
+    {
+      group: 'Quick cash (buys time)',
+      color: '#2a1a3a',
+      items: [
+        { action: 'Sell unused items on Facebook Marketplace', impact: '$300–$2,000 one-off', note: 'Electronics, furniture, clothes, tools, sports gear. Most households have $1k+ sitting idle.' },
+        { action: 'Sell on eBay or Gumtree', impact: '$200–$1,500 one-off', note: 'Better prices than cash converters. Collectibles, tech, and brand clothing sell fast.' },
+        { action: 'Cash Converters / Music Swop Shop for instruments or tools', impact: '$100–$800 one-off', note: 'Instant cash but low return. Use as a last resort for genuinely unused items.' },
+      ],
+    },
+    {
+      group: 'Restructure debt and housing',
+      color: '#1a1f1a',
+      items: [
+        { action: 'Refinance your mortgage to a lower rate', impact: '+$200–$800/mo', note: 'Even 0.5% lower on a $600k loan saves ~$250/mo. Get a broker to check — free service.' },
+        { action: 'Contact your bank\'s hardship team', impact: 'Temporary relief', note: 'Banks are legally required to assist. Repayment pauses, interest-only periods, fee waivers.' },
+        { action: 'Consolidate high-interest debt', impact: '+$100–$400/mo', note: 'Rolling credit card debt into your mortgage or a personal loan at lower rate reduces cash drain.' },
+        { action: 'Take in a housemate', impact: '+$800–$1,500/mo', note: 'The single fastest income change. Even 6 months of a housemate can reset the balance sheet.' },
+      ],
+    },
+  ];
+
   // Stripe Payment Link — create at dashboard.stripe.com/payment-links
   // In the link settings → After payment → set redirect to:
   //   https://hobeybennett.github.io/Budget-app-/?payment=success
@@ -2032,6 +2076,46 @@ export default function App() {
                     </div>
                   )}
                 </div>
+
+                {/* Deficit recovery section */}
+                {income > 0 && (income - totalSuggested) < 0 && (() => {
+                  const shortfall = totalSuggested - income;
+                  return (
+                    <section style={{ marginBottom: 48 }}>
+                      <div style={{ background: '#2d1a0e', color: '#f4efe6', padding: '28px 32px', marginBottom: 24 }}>
+                        <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.6, marginBottom: 8 }}>Budget shortfall</div>
+                        <div className="display" style={{ fontSize: 36, fontWeight: 700, marginBottom: 8, lineHeight: 1 }}>
+                          You're {fmt(shortfall)}/mo in the red
+                        </div>
+                        <p style={{ fontSize: 15, opacity: 0.8, margin: 0, lineHeight: 1.5, maxWidth: 560 }}>
+                          Cutting costs alone won't close a gap this size. Here are practical ways to get back into the black — ranked by impact.
+                        </p>
+                      </div>
+
+                      {DEFICIT_PLAYBOOK.map(({ group, color, items }) => (
+                        <div key={group} style={{ marginBottom: 24 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                            <div style={{ width: 12, height: 12, background: color, flexShrink: 0 }} />
+                            <div className="mono" style={{ fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', fontWeight: 600 }}>{group}</div>
+                          </div>
+                          <div style={{ display: 'grid', gap: 8 }}>
+                            {items.map((item, i) => (
+                              <div key={i} style={{ background: '#fff', border: '1px solid #e8e1d0', padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
+                                <div>
+                                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{item.action}</div>
+                                  <div style={{ fontSize: 13, color: '#6b6758', lineHeight: 1.5 }}>{item.note}</div>
+                                </div>
+                                <div style={{ background: color, color: '#f4efe6', padding: '6px 12px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', alignSelf: 'start', fontFamily: 'inherit' }}>
+                                  {item.impact}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </section>
+                  );
+                })()}
 
                 {/* Category cards */}
                 <div style={{ display: 'grid', gap: 16 }}>
