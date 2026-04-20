@@ -61,6 +61,42 @@ const TEST_CSV = `Date,Description,Debit,Credit,Balance
 30/04/2026,Amazon AU,32.99,,14390.56
 30/04/2026,Starbucks Collins St,8.50,,14382.06`;
 
+// --- Australian salary benchmarks (2024/25, full-time, national median base) ---
+const AU_SALARY_BENCHMARKS = [
+  { keywords: ['software engineer','software developer','frontend','backend','full stack','fullstack','web developer','react','javascript developer'], title: 'Software Developer / Engineer', low: 85000, median: 118000, high: 162000, next: [['Senior Software Engineer', 130000, 180000],['Tech Lead / Principal Engineer', 148000, 200000],['Engineering Manager', 160000, 230000]], field: 'software-developer' },
+  { keywords: ['data analyst','data analytics','business intelligence','bi analyst'], title: 'Data Analyst', low: 72000, median: 93000, high: 125000, next: [['Senior Data Analyst', 100000, 135000],['Data Scientist', 115000, 155000],['Analytics Manager', 130000, 175000]], field: 'data-analyst' },
+  { keywords: ['data scientist','machine learning','ml engineer','ai engineer'], title: 'Data Scientist / ML Engineer', low: 100000, median: 130000, high: 170000, next: [['Senior Data Scientist', 140000, 185000],['Principal Data Scientist', 165000, 220000],['Head of Data', 180000, 250000]], field: 'data-scientist' },
+  { keywords: ['devops','cloud engineer','site reliability','sre','platform engineer','infrastructure engineer'], title: 'DevOps / Cloud Engineer', low: 100000, median: 132000, high: 170000, next: [['Senior DevOps Engineer', 140000, 180000],['Cloud Architect', 155000, 210000],['Head of Infrastructure', 170000, 230000]], field: 'devops-engineer' },
+  { keywords: ['product manager','product owner'], title: 'Product Manager', low: 105000, median: 140000, high: 185000, next: [['Senior Product Manager', 150000, 195000],['Group Product Manager', 175000, 230000],['CPO / VP Product', 200000, 300000]], field: 'product-manager' },
+  { keywords: ['ux designer','ui designer','ux/ui','user experience','interaction designer'], title: 'UX / UI Designer', low: 78000, median: 105000, high: 145000, next: [['Senior UX Designer', 115000, 150000],['Lead Designer', 135000, 175000],['Design Manager / Director', 155000, 210000]], field: 'ux-designer' },
+  { keywords: ['project manager','program manager','pmo'], title: 'Project Manager', low: 92000, median: 120000, high: 155000, next: [['Senior Project Manager', 128000, 165000],['Program Manager', 145000, 190000],['Head of PMO', 160000, 210000]], field: 'project-manager' },
+  { keywords: ['business analyst','systems analyst','ba '], title: 'Business Analyst', low: 82000, median: 108000, high: 145000, next: [['Senior Business Analyst', 115000, 150000],['Principal BA / Solution Architect', 138000, 175000],['IT Manager / Director', 150000, 200000]], field: 'business-analyst' },
+  { keywords: ['accountant','accounting'], title: 'Accountant', low: 62000, median: 85000, high: 120000, next: [['Senior Accountant', 90000, 125000],['Finance Manager', 110000, 150000],['CFO / Financial Controller', 150000, 250000]], field: 'accountant' },
+  { keywords: ['financial analyst','finance analyst','fp&a'], title: 'Financial Analyst', low: 78000, median: 100000, high: 135000, next: [['Senior Financial Analyst', 108000, 145000],['Finance Manager', 120000, 165000],['Director of Finance', 160000, 220000]], field: 'financial-analyst' },
+  { keywords: ['marketing manager','head of marketing','marketing director'], title: 'Marketing Manager', low: 90000, median: 118000, high: 155000, next: [['Senior Marketing Manager', 125000, 165000],['Head of Marketing', 145000, 195000],['CMO', 180000, 280000]], field: 'marketing-manager' },
+  { keywords: ['digital marketing','seo','sem','performance marketing','paid media'], title: 'Digital Marketing Specialist', low: 62000, median: 82000, high: 115000, next: [['Digital Marketing Manager', 90000, 125000],['Head of Digital', 120000, 165000],['Marketing Director', 145000, 200000]], field: 'digital-marketing-specialist' },
+  { keywords: ['hr manager','human resources','people and culture','talent acquisition','recruiter'], title: 'HR / People & Culture Manager', low: 85000, median: 108000, high: 145000, next: [['Senior HR Manager', 115000, 155000],['HR Director', 145000, 195000],['Chief People Officer', 175000, 260000]], field: 'hr-manager' },
+  { keywords: ['sales manager','account manager','account executive','sales executive','business development'], title: 'Sales / Account Manager', low: 70000, median: 98000, high: 160000, next: [['Senior Account Manager', 105000, 175000],['Sales Director', 140000, 220000],['VP Sales', 175000, 300000]], field: 'sales-manager' },
+  { keywords: ['operations manager','operations director','head of operations','coo'], title: 'Operations Manager', low: 90000, median: 120000, high: 165000, next: [['Senior Operations Manager', 130000, 170000],['Director of Operations', 155000, 210000],['COO', 190000, 300000]], field: 'operations-manager' },
+  { keywords: ['registered nurse','rn ','nurse ','nursing'], title: 'Registered Nurse', low: 72000, median: 88000, high: 108000, next: [['Clinical Nurse Specialist', 92000, 115000],['Nurse Manager / CNS', 100000, 130000],['Director of Nursing', 120000, 165000]], field: 'registered-nurse' },
+  { keywords: ['physiotherapist','physio'], title: 'Physiotherapist', low: 72000, median: 92000, high: 120000, next: [['Senior Physiotherapist', 98000, 130000],['Clinical Lead / Manager', 115000, 150000],['Practice Principal', 130000, 180000]], field: 'physiotherapist' },
+  { keywords: ['pharmacist'], title: 'Pharmacist', low: 85000, median: 100000, high: 128000, next: [['Senior Pharmacist / Clinical', 105000, 135000],['Pharmacy Manager', 115000, 150000],['Pharmaceutical Industry', 120000, 200000]], field: 'pharmacist' },
+  { keywords: ['psychologist','counsellor','counselor','therapist'], title: 'Psychologist / Counsellor', low: 78000, median: 102000, high: 135000, next: [['Senior Psychologist', 110000, 145000],['Clinical Psychology Specialist', 125000, 160000],['Private Practice Principal', 140000, 220000]], field: 'psychologist' },
+  { keywords: ['doctor','gp','general practitioner','physician','medical officer'], title: 'Medical Officer / GP', low: 160000, median: 240000, high: 380000, next: [['GP Principal / Owner', 280000, 450000],['Specialist Physician', 300000, 600000]], field: 'medical-officer' },
+  { keywords: ['teacher','educator','instructor'], title: 'Teacher / Educator', low: 68000, median: 88000, high: 108000, next: [['Head of Department', 95000, 115000],['Deputy Principal', 108000, 135000],['Principal', 130000, 175000]], field: 'teacher' },
+  { keywords: ['electrician','electrical tradesperson'], title: 'Electrician', low: 68000, median: 90000, high: 120000, next: [['Electrical Supervisor / Foreman', 98000, 130000],['Electrical Contractor (self-employed)', 120000, 200000],['Project Electrical Engineer', 110000, 155000]], field: 'electrician' },
+  { keywords: ['plumber','plumbing'], title: 'Plumber', low: 65000, median: 87000, high: 115000, next: [['Plumbing Supervisor', 95000, 125000],['Plumbing Contractor', 115000, 190000],['Project Manager (construction)', 110000, 150000]], field: 'plumber' },
+  { keywords: ['civil engineer','structural engineer','mechanical engineer','electrical engineer','engineering'], title: 'Engineer (Civil / Structural / Mechanical)', low: 82000, median: 110000, high: 148000, next: [['Senior Engineer', 118000, 155000],['Principal Engineer', 140000, 185000],['Engineering Manager / Director', 160000, 220000]], field: 'engineer' },
+  { keywords: ['lawyer','solicitor','barrister','legal'], title: 'Lawyer / Solicitor', low: 78000, median: 130000, high: 250000, next: [['Senior Associate', 140000, 190000],['Special Counsel', 175000, 240000],['Partner', 250000, 500000]], field: 'lawyer' },
+  { keywords: ['social worker','case manager','community worker'], title: 'Social Worker / Case Manager', low: 62000, median: 78000, high: 100000, next: [['Senior Social Worker', 84000, 108000],['Team Leader / Manager', 95000, 125000],['Program Director (NGO / Govt)', 110000, 150000]], field: 'social-worker' },
+  { keywords: ['real estate agent','property manager','real estate'], title: 'Real Estate Agent / Property Manager', low: 55000, median: 85000, high: 160000, next: [['Senior Sales Agent (top performer)', 120000, 250000],['Licensee in Charge', 110000, 175000],['Property Development Manager', 130000, 200000]], field: 'real-estate-agent' },
+  { keywords: ['chef','cook','head chef','sous chef'], title: 'Chef', low: 52000, median: 68000, high: 95000, next: [['Head Chef / Executive Chef', 80000, 120000],['Food & Beverage Manager', 85000, 120000],['Catering Manager (corporate)', 90000, 130000]], field: 'chef' },
+  { keywords: ['graphic designer','designer','visual designer'], title: 'Graphic / Visual Designer', low: 58000, median: 78000, high: 108000, next: [['Senior Designer', 88000, 120000],['Creative Director', 115000, 160000],['Design Manager', 120000, 165000]], field: 'graphic-designer' },
+  { keywords: ['supply chain','logistics','procurement','warehouse manager'], title: 'Supply Chain / Logistics Manager', low: 85000, median: 112000, high: 155000, next: [['Senior Supply Chain Manager', 120000, 160000],['Head of Logistics / Procurement', 145000, 195000],['Chief Supply Chain Officer', 175000, 260000]], field: 'supply-chain-manager' },
+];
+
+const AU_LOCATION_PREMIUM = { sydney: 0.12, melbourne: 0.10, brisbane: 0.05, perth: 0.08, canberra: 0.18, adelaide: -0.02, hobart: -0.05, darwin: 0.06, national: 0 };
+
 // --- Australian merchant categorisation rules ---
 // Rule order matters — the FIRST matching rule wins. So specific patterns
 // (e.g. "mortgage") must come before generic ones (e.g. "transfer to").
@@ -880,6 +916,12 @@ export default function App() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Salary insights state
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobLocation, setJobLocation] = useState('national');
+  const [currentSalary, setCurrentSalary] = useState('');
+  const [salaryResult, setSalaryResult] = useState(null);
+
   // Check for Stripe payment success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1260,7 +1302,7 @@ export default function App() {
 </div>
 <footer>
   <div class="ft">Pinchy</div>
-  <div class="url">pinchy.app</div>
+  <div class="url">pinchy.money</div>
 </footer>
 </body>
 </html>`;
@@ -1286,6 +1328,25 @@ export default function App() {
     setBudgetAllocs(allocs);
     setBudgetIncome(income > 0 ? String(Math.round(income)) : '');
     setView('budget');
+  };
+
+  const checkSalary = () => {
+    const query = jobTitle.toLowerCase().trim();
+    if (!query) return;
+    const match = AU_SALARY_BENCHMARKS.find(b => b.keywords.some(k => query.includes(k) || k.includes(query)));
+    if (!match) { setSalaryResult({ notFound: true, query: jobTitle }); return; }
+    const premium = AU_LOCATION_PREMIUM[jobLocation] ?? 0;
+    const low = Math.round(match.low * (1 + premium));
+    const median = Math.round(match.median * (1 + premium));
+    const high = Math.round(match.high * (1 + premium));
+    const current = parseInt(currentSalary.replace(/[^0-9]/g, ''), 10) || 0;
+    const pctVsMedian = current > 0 ? Math.round(((current - median) / median) * 100) : null;
+    const nextRoles = match.next.map(([title, nLow, nHigh]) => ({
+      title,
+      low: Math.round(nLow * (1 + premium)),
+      high: Math.round(nHigh * (1 + premium)),
+    }));
+    setSalaryResult({ match, low, median, high, current, pctVsMedian, nextRoles, field: match.field, location: jobLocation });
   };
 
   const analysis = useMemo(() => {
@@ -2144,6 +2205,170 @@ export default function App() {
                     </section>
                   );
                 })()}
+
+                {/* ── Salary insights ── */}
+                <section style={{ marginBottom: 40 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#2e5a3a', marginBottom: 6 }}>Income side</div>
+                      <h3 className="display" style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>Can you earn more?</h3>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#fff', border: '1px solid #e8e1d0', padding: 24, marginBottom: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+                      <div>
+                        <label className="mono" style={{ display: 'block', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Your job title</label>
+                        <input
+                          value={jobTitle}
+                          onChange={e => setJobTitle(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && checkSalary()}
+                          placeholder="e.g. Software Engineer"
+                          style={{ width: '100%', border: '1px solid #d6cfc4', background: '#faf6ee', padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label className="mono" style={{ display: 'block', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Location</label>
+                        <select
+                          value={jobLocation}
+                          onChange={e => setJobLocation(e.target.value)}
+                          style={{ width: '100%', border: '1px solid #d6cfc4', background: '#faf6ee', padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', outline: 'none', appearance: 'none', boxSizing: 'border-box' }}
+                        >
+                          <option value="national">National (avg)</option>
+                          <option value="sydney">Sydney</option>
+                          <option value="melbourne">Melbourne</option>
+                          <option value="brisbane">Brisbane</option>
+                          <option value="perth">Perth</option>
+                          <option value="canberra">Canberra</option>
+                          <option value="adelaide">Adelaide</option>
+                          <option value="hobart">Hobart</option>
+                          <option value="darwin">Darwin</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mono" style={{ display: 'block', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Current salary (optional)</label>
+                        <input
+                          value={currentSalary}
+                          onChange={e => setCurrentSalary(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && checkSalary()}
+                          placeholder="e.g. 95000"
+                          style={{ width: '100%', border: '1px solid #d6cfc4', background: '#faf6ee', padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <button
+                        onClick={checkSalary}
+                        style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '10px 20px', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', height: 42 }}
+                      >
+                        Check Market
+                      </button>
+                    </div>
+                  </div>
+
+                  {salaryResult && (
+                    salaryResult.notFound ? (
+                      <div style={{ background: '#fff8f0', border: '1px solid #e8cdb0', padding: '20px 24px', color: '#7a5020' }}>
+                        <strong>No match found</strong> for "{salaryResult.query}". Try a more general title like "accountant", "nurse", or "project manager".
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: 16 }}>
+                        {/* Market range bar */}
+                        <div style={{ background: '#fff', border: '1px solid #e8e1d0', padding: 24 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 8 }}>
+                            <div>
+                              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 4 }}>Market rate —{' '}
+                                {salaryResult.location === 'national' ? 'National' : salaryResult.location.charAt(0).toUpperCase() + salaryResult.location.slice(1)}
+                              </div>
+                              <div className="display" style={{ fontSize: 22, fontWeight: 700 }}>{salaryResult.match.title}</div>
+                            </div>
+                            {salaryResult.pctVsMedian !== null && (
+                              <div style={{
+                                background: salaryResult.pctVsMedian >= 10 ? '#e8f5ee' : salaryResult.pctVsMedian >= -5 ? '#f0ebe0' : '#fdf0ec',
+                                border: `1px solid ${salaryResult.pctVsMedian >= 10 ? '#2e5a3a' : salaryResult.pctVsMedian >= -5 ? '#b0a060' : '#c05030'}`,
+                                padding: '10px 18px', textAlign: 'center'
+                              }}>
+                                <div className="mono" style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 4 }}>vs median</div>
+                                <div className="display" style={{ fontSize: 22, fontWeight: 700, color: salaryResult.pctVsMedian >= 10 ? '#2e5a3a' : salaryResult.pctVsMedian >= -5 ? '#7a6520' : '#c05030' }}>
+                                  {salaryResult.pctVsMedian > 0 ? '+' : ''}{salaryResult.pctVsMedian}%
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Range bar */}
+                          <div style={{ position: 'relative', marginBottom: 8 }}>
+                            <div style={{ height: 12, background: '#e8e1d0', borderRadius: 0, position: 'relative', overflow: 'visible' }}>
+                              {/* filled bar */}
+                              <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, background: 'linear-gradient(to right, #d6cfc4, #1f3a2e)' }} />
+                              {/* current salary marker */}
+                              {salaryResult.current > 0 && (() => {
+                                const pct = Math.min(100, Math.max(0, ((salaryResult.current - salaryResult.low) / (salaryResult.high - salaryResult.low)) * 100));
+                                return (
+                                  <div style={{ position: 'absolute', left: `${pct}%`, top: -6, transform: 'translateX(-50%)', width: 4, height: 24, background: '#b5451b', zIndex: 2 }} />
+                                );
+                              })()}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                              <div style={{ textAlign: 'left' }}>
+                                <div className="mono" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6b6758' }}>Low</div>
+                                <div className="display" style={{ fontSize: 15, fontWeight: 700 }}>${salaryResult.low.toLocaleString('en-AU')}</div>
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                <div className="mono" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6b6758' }}>Median</div>
+                                <div className="display" style={{ fontSize: 15, fontWeight: 700, color: '#1f3a2e' }}>${salaryResult.median.toLocaleString('en-AU')}</div>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div className="mono" style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6b6758' }}>High</div>
+                                <div className="display" style={{ fontSize: 15, fontWeight: 700 }}>${salaryResult.high.toLocaleString('en-AU')}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {salaryResult.current > 0 && salaryResult.pctVsMedian < -5 && (
+                            <div style={{ marginTop: 16, background: '#fdf0ec', border: '1px solid #e8b090', padding: '12px 16px', fontSize: 13, color: '#7a3010', lineHeight: 1.5 }}>
+                              <strong>You're earning below the median.</strong> The typical {salaryResult.match.title} earns ${salaryResult.median.toLocaleString('en-AU')} — that's ${(salaryResult.median - salaryResult.current).toLocaleString('en-AU')} more per year, or ${Math.round((salaryResult.median - salaryResult.current) / 12).toLocaleString('en-AU')}/mo after tax. A job switch at this stage typically yields 15–20% more than an internal raise.
+                            </div>
+                          )}
+                          {salaryResult.current > 0 && salaryResult.pctVsMedian >= -5 && salaryResult.pctVsMedian < 10 && (
+                            <div style={{ marginTop: 16, background: '#f8f5e8', border: '1px solid #d6c870', padding: '12px 16px', fontSize: 13, color: '#5a4810', lineHeight: 1.5 }}>
+                              <strong>You're around the median.</strong> There's still room to move up — consider negotiating a raise or targeting the next role tier below.
+                            </div>
+                          )}
+                          {salaryResult.current > 0 && salaryResult.pctVsMedian >= 10 && (
+                            <div style={{ marginTop: 16, background: '#e8f5ee', border: '1px solid #a0d0b0', padding: '12px 16px', fontSize: 13, color: '#1a4a28', lineHeight: 1.5 }}>
+                              <strong>You're above median.</strong> You're well-paid for this role. The next income leap likely requires a title change — see below.
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Next roles */}
+                        <div style={{ background: '#fff', border: '1px solid #e8e1d0', padding: 24 }}>
+                          <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 16 }}>Next career moves</div>
+                          <div style={{ display: 'grid', gap: 10 }}>
+                            {salaryResult.nextRoles.map(({ title, low, high }) => (
+                              <div key={title} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#faf6ee', border: '1px solid #e8e1d0' }}>
+                                <div style={{ fontWeight: 600, fontSize: 14 }}>{title}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                  <div className="display" style={{ fontSize: 16, fontWeight: 700, color: '#2e5a3a' }}>${low.toLocaleString('en-AU')} – ${high.toLocaleString('en-AU')}</div>
+                                  <a
+                                    href={`https://www.seek.com.au/${salaryResult.field}-jobs`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ background: '#1f3a2e', color: '#f4efe6', padding: '5px 12px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', textDecoration: 'none', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}
+                                  >
+                                    Seek →
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ marginTop: 12, fontSize: 11, color: '#9a9288' }}>
+                            Salary ranges are 2024/25 AU market estimates. Actual salaries vary by employer, experience, and negotiation.
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </section>
 
                 {/* Category cards */}
                 <div style={{ display: 'grid', gap: 16 }}>
