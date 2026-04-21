@@ -1685,8 +1685,11 @@ export default function App() {
                 <Shield size={14} /> <span className="mono" style={{ letterSpacing: '0.1em' }}>PROCESSED ON-DEVICE</span>
               </div>
             </div>
-            <p style={{ fontSize: 17, maxWidth: 640, margin: '20px 0 0', color: '#3a3d38', lineHeight: 1.5 }}>
-              Upload a CSV export from your bank or credit card. Categorises your spending, compares each category to the average Australian household, and finds cheaper alternatives — all in your browser. <strong>The file is read locally and never uploaded.</strong>
+            <p className="display" style={{ fontSize: 22, fontWeight: 700, margin: '24px 0 0', maxWidth: 640, lineHeight: 1.35, color: '#1f3a2e' }}>
+              Most budgets fail because they're fiction.<br />Pinchy builds yours from what your money actually does.
+            </p>
+            <p style={{ fontSize: 15, maxWidth: 600, margin: '14px 0 0', color: '#6b6758', lineHeight: 1.6 }}>
+              Upload a CSV export from your bank. Categorises your spending, compares it to the average Australian household, and finds cheaper alternatives — all in your browser. <strong style={{ color: '#3a3d38' }}>Your file never leaves your device.</strong>
             </p>
           </header>
         )}
