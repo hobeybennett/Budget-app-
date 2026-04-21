@@ -2078,18 +2078,25 @@ export default function App() {
               )}
             </section>
 
-            {/* --- Build my budget CTA --- */}
-            <section style={{ marginTop: 56, padding: 40, background: '#1f3a2e', color: '#f4efe6', textAlign: 'center' }}>
-              <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 12 }}>Next step</div>
-              <div className="display" style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, lineHeight: 1.2 }}>
-                Build a budget that fits your life
+            {/* --- CTAs --- */}
+            <section style={{ marginTop: 56, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <div style={{ padding: 40, background: '#1f3a2e', color: '#f4efe6', textAlign: 'center' }}>
+                <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 12 }}>Next step</div>
+                <div className="display" style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, lineHeight: 1.2 }}>Build your budget</div>
+                <p style={{ fontSize: 14, opacity: 0.8, margin: '0 auto 24px', lineHeight: 1.6 }}>Turn your spending into a realistic monthly plan.</p>
+                <button className="btn-analyse" onClick={goToBudget} style={{ background: '#f4efe6', color: '#1f3a2e', padding: '14px 28px', fontSize: 15 }}>
+                  Build My Budget <ArrowRight size={18} />
+                </button>
               </div>
-              <p style={{ fontSize: 15, opacity: 0.8, maxWidth: 480, margin: '0 auto 28px', lineHeight: 1.6 }}>
-                We'll use your actual spending as a starting point and generate a realistic monthly budget — then let you adjust every category until it works for you.
-              </p>
-              <button className="btn-analyse" onClick={goToBudget} style={{ background: '#f4efe6', color: '#1f3a2e' }}>
-                Build My Budget <ArrowRight size={20} />
-              </button>
+              <div style={{ padding: 40, background: '#2e5a3a', color: '#f4efe6', textAlign: 'center' }}>
+                <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 12 }}>Behaviour</div>
+                <div className="display" style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, lineHeight: 1.2 }}>See your habits</div>
+                <p style={{ fontSize: 14, opacity: 0.8, margin: '0 auto 24px', lineHeight: 1.6 }}>How often you eat out, grab coffee, shop online — and what to cut.</p>
+                <button className="btn-analyse" onClick={() => setView('habits')} style={{ background: '#f4efe6', color: '#2e5a3a', padding: '14px 28px', fontSize: 15 }}>
+                  View Habits <Zap size={18} />
+                </button>
+              </div>
+            </section>
             </section>
           </div>
         )}
@@ -2435,6 +2442,142 @@ export default function App() {
                             ))}
                           </div>
                         )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+          );
+        })()}
+
+        {/* ============ HABITS VIEW ============ */}
+        {view === 'habits' && analysis && (() => {
+          const HABIT_CATS = [
+            { cat: 'Dining Out',  verb: 'ate out',       unit: 'meal',    icon: '🍽', cutVerb: 'Skip one meal out',    suggestion: 0.75 },
+            { cat: 'Coffee',      verb: 'bought coffee', unit: 'coffee',  icon: '☕', cutVerb: 'Cut one coffee a week', suggestion: 0.75 },
+            { cat: 'Takeaway',    verb: 'ordered in',    unit: 'order',   icon: '📦', cutVerb: 'Drop one delivery',     suggestion: 0.75 },
+            { cat: 'Alcohol',     verb: 'bought alcohol',unit: 'visit',   icon: '🍺', cutVerb: 'Buy one round less',    suggestion: 0.75 },
+            { cat: 'Shopping',    verb: 'shopped online/retail', unit: 'purchase', icon: '🛍', cutVerb: 'Skip one purchase', suggestion: 0.80 },
+            { cat: 'Fuel',        verb: 'filled up',     unit: 'fillup',  icon: '⛽', cutVerb: 'Combine trips',          suggestion: 0.85 },
+            { cat: 'Entertainment', verb: 'went out',    unit: 'outing',  icon: '🎬', cutVerb: 'Skip one outing',       suggestion: 0.75 },
+          ];
+
+          const pm = analysis.periodMonths || 1;
+
+          const habits = HABIT_CATS.map(({ cat, verb, unit, icon, cutVerb, suggestion }) => {
+            const entry = analysis.byCategory?.[cat];
+            if (!entry || entry.count === 0) return null;
+            const txns = entry.items;
+            const totalSpend = entry.total;
+            const countPerMonth = entry.count / pm;
+            const spendPerMonth = totalSpend / pm;
+            const avgPerVisit = totalSpend / txns.length;
+            const suggestedCount = Math.max(0, Math.round(countPerMonth * suggestion));
+            const suggestedSpend = suggestedCount * avgPerVisit;
+            const saving = spendPerMonth - suggestedSpend;
+            const timesPerWeek = countPerMonth / 4.33;
+            return { cat, verb, unit, icon, cutVerb, countPerMonth, spendPerMonth, avgPerVisit, suggestedCount, suggestedSpend, saving, timesPerWeek, txns };
+          }).filter(Boolean).filter(h => h.countPerMonth >= 1).sort((a, b) => b.saving - a.saving);
+
+          const totalSaving = habits.reduce((s, h) => s + h.saving, 0);
+
+          const fmtFreq = (n) => {
+            if (n >= 28) return `${Math.round(n)} times a month`;
+            if (n >= 7) return `${Math.round(n)} times a month`;
+            if (n < 1) return `${Math.round(n * 4.33)} times a month`;
+            const pw = n / 4.33;
+            if (pw >= 6) return 'daily';
+            if (pw >= 4.5) return '5–6×/week';
+            if (pw >= 3.5) return '4–5×/week';
+            if (pw >= 2.5) return '3–4×/week';
+            if (pw >= 1.8) return '2–3×/week';
+            if (pw >= 1.2) return 'about twice a week';
+            if (pw >= 0.8) return 'about once a week';
+            if (pw >= 0.5) return 'every couple of weeks';
+            return `${Math.round(n)} times a month`;
+          };
+
+          return (
+            <div className="fade-in">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 40 }}>
+                <button onClick={() => setView('results')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                  <ArrowLeft size={14} /> Results
+                </button>
+                <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>YOUR HABITS</span>
+                <button onClick={goToBudget} style={{ background: '#f4efe6', color: '#1f3a2e', border: 'none', padding: '6px 16px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
+                  Build Budget →
+                </button>
+              </div>
+
+              <section style={{ marginBottom: 40 }}>
+                <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Your spending habits</h2>
+                <p style={{ color: '#6b6758', margin: '0 0 28px', fontSize: 15 }}>
+                  Based on {Math.round(pm)} month{pm >= 1.5 ? 's' : ''} of transactions. How often you spend, what each visit costs, and what one small change saves.
+                </p>
+
+                {totalSaving > 0 && (
+                  <div style={{ padding: '20px 28px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 6 }}>One small change in each habit saves</div>
+                      <div className="display" style={{ fontSize: 40, fontWeight: 700, lineHeight: 1 }}>{fmt(totalSaving)}<span style={{ fontSize: 16, fontWeight: 400, opacity: 0.7 }}>/mo</span></div>
+                    </div>
+                    <div className="display" style={{ fontSize: 20, fontWeight: 700, opacity: 0.8 }}>{fmt(totalSaving * 12)}/yr</div>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {habits.map(({ cat, verb, icon, cutVerb, countPerMonth, spendPerMonth, avgPerVisit, suggestedCount, suggestedSpend, saving, timesPerWeek }) => {
+                    const currentRounded = Math.round(countPerMonth);
+                    const barWidth = Math.min(100, (suggestedCount / Math.max(currentRounded, 1)) * 100);
+                    return (
+                      <div key={cat} style={{ background: '#fff', border: '1px solid #e8e1d0' }}>
+                        {/* Header */}
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e8e1d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 24 }}>{icon}</span>
+                            <div>
+                              <div className="display" style={{ fontSize: 20, fontWeight: 700 }}>{cat}</div>
+                              <div style={{ fontSize: 13, color: '#6b6758', marginTop: 2 }}>
+                                You {verb} <strong>{fmtFreq(countPerMonth)}</strong> — {fmt(avgPerVisit)} avg per visit
+                              </div>
+                            </div>
+                          </div>
+                          {saving > 2 && (
+                            <div style={{ background: '#1f3a2e', color: '#f4efe6', padding: '6px 14px', fontSize: 13, fontWeight: 600 }}>
+                              Save {fmt(saving)}/mo
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Frequency bar + suggestion */}
+                        <div style={{ padding: '18px 20px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
+                            <div>
+                              <div className="mono" style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Current</div>
+                              <div className="display" style={{ fontSize: 28, fontWeight: 700, color: '#a04020' }}>{currentRounded}×<span style={{ fontSize: 14, color: '#6b6758', fontFamily: 'inherit', fontWeight: 400 }}>/mo</span></div>
+                              <div className="mono" style={{ fontSize: 12, color: '#6b6758', marginTop: 2 }}>{fmt(spendPerMonth)}/mo</div>
+                            </div>
+                            <div>
+                              <div className="mono" style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Suggested</div>
+                              <div className="display" style={{ fontSize: 28, fontWeight: 700, color: '#2e5a3a' }}>{suggestedCount}×<span style={{ fontSize: 14, color: '#6b6758', fontFamily: 'inherit', fontWeight: 400 }}>/mo</span></div>
+                              <div className="mono" style={{ fontSize: 12, color: '#6b6758', marginTop: 2 }}>{fmt(suggestedSpend)}/mo</div>
+                            </div>
+                          </div>
+
+                          {/* Visual bar: current vs suggested */}
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{ height: 8, background: '#fae8d7', position: 'relative', overflow: 'hidden' }}>
+                              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${barWidth}%`, background: '#2e5a3a', transition: 'width 0.4s ease' }} />
+                            </div>
+                          </div>
+
+                          {saving > 2 && (
+                            <div style={{ background: '#f0f7f2', border: '1px solid #b0d4bc', padding: '10px 14px', fontSize: 13, color: '#1f3a2e', lineHeight: 1.5 }}>
+                              <strong>{cutVerb}</strong> — drop from {currentRounded} to {suggestedCount} times a month and save {fmt(saving)}/mo ({fmt(saving * 12)}/yr).
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
