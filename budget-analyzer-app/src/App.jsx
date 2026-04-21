@@ -1939,19 +1939,24 @@ export default function App() {
         {/* ============ RESULTS VIEW ============ */}
         {view === 'results' && analysis && (
           <div className="fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 40 }}>
-              <button onClick={() => setView('upload')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 40, flexWrap: 'wrap', gap: 8 }}>
+              <button onClick={() => setView('upload')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
                 <ArrowLeft size={14} /> Back
               </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
-                <FileText size={16} />
-                <span className="mono">{fileName}</span>
-                <span style={{ opacity: 0.6 }}>·</span>
-                <span>{transactions.length} txns</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setHabitStep(0); setHabitChoices({}); setView('habits'); }}
+                  style={{ background: 'rgba(244,239,230,0.15)', border: '1px solid rgba(244,239,230,0.4)', color: '#f4efe6', padding: '8px 16px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Zap size={13} /> View Habits
+                </button>
+                <button
+                  onClick={goToBudget}
+                  style={{ background: '#f4efe6', color: '#1f3a2e', border: 'none', padding: '8px 16px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  Build Budget <ArrowRight size={13} />
+                </button>
               </div>
-              <button onClick={reset} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                <X size={14} /> Clear
-              </button>
             </div>
 
             {/* --- Your monthly budget --- */}
