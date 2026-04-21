@@ -922,6 +922,10 @@ export default function App() {
   const [currentSalary, setCurrentSalary] = useState('');
   const [salaryResult, setSalaryResult] = useState(null);
 
+  // Habits wizard state
+  const [habitStep, setHabitStep] = useState(0);
+  const [habitChoices, setHabitChoices] = useState({});
+
   // Check for Stripe payment success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1048,6 +1052,8 @@ export default function App() {
     setBudgetAllocs({});
     setBudgetIncome('');
     setLoadedCats(null);
+    setHabitStep(0);
+    setHabitChoices({});
     setView('upload');
     if (fileRef.current) fileRef.current.value = '';
   };
@@ -1347,6 +1353,58 @@ export default function App() {
       high: Math.round(nHigh * (1 + premium)),
     }));
     setSalaryResult({ match, low, median, high, current, pctVsMedian, nextRoles, field: match.field, location: jobLocation });
+  };
+
+  const HABIT_CATS = [
+    { cat: 'Dining Out',    verb: 'eat out',             icon: '🍽', suggestion: 0.75 },
+    { cat: 'Coffee',        verb: 'buy coffee',           icon: '☕', suggestion: 0.75 },
+    { cat: 'Takeaway',      verb: 'order in',             icon: '📦', suggestion: 0.75 },
+    { cat: 'Alcohol',       verb: 'buy alcohol',          icon: '🍺', suggestion: 0.75 },
+    { cat: 'Shopping',      verb: 'shop online or in-store', icon: '🛍', suggestion: 0.80 },
+    { cat: 'Entertainment', verb: 'go out',               icon: '🎬', suggestion: 0.75 },
+    { cat: 'Fuel',          verb: 'fill up',              icon: '⛽', suggestion: 0.85 },
+  ];
+
+  const computeHabits = () => {
+    if (!analysis) return [];
+    const pm = analysis.periodMonths || 1;
+    return HABIT_CATS.map(({ cat, verb, icon, suggestion }) => {
+      const entry = analysis.byCategory?.[cat];
+      if (!entry || entry.count === 0) return null;
+      const countPerMonth = entry.count / pm;
+      if (countPerMonth < 1) return null;
+      const spendPerMonth = entry.total / pm;
+      const avgPerVisit = entry.total / entry.count;
+      const suggestedCount = Math.max(0, Math.round(countPerMonth * suggestion));
+      const suggestedSpend = suggestedCount * avgPerVisit;
+      const saving = spendPerMonth - suggestedSpend;
+      return { cat, verb, icon, suggestion, countPerMonth, spendPerMonth, avgPerVisit, suggestedCount, suggestedSpend, saving };
+    }).filter(Boolean).sort((a, b) => b.saving - a.saving);
+  };
+
+  const goToBudgetWithHabits = (choices) => {
+    if (!analysis) return;
+    const pm = analysis.periodMonths || 1;
+    const income = analysis.reliableMonthlyIncome || 0;
+    const habits = computeHabits();
+    const habitCatSet = new Set(habits.map(h => h.cat));
+
+    const cats = computeBudgetCats(analysis).map(c => {
+      if (!habitCatSet.has(c.cat)) return c;
+      const h = habits.find(x => x.cat === c.cat);
+      if (!h) return c;
+      if (choices[c.cat] === true) {
+        return { ...c, suggested: Math.round(h.suggestedSpend), saving: Math.round(c.current - h.suggestedSpend) };
+      }
+      if (choices[c.cat] === false) {
+        return { ...c, suggested: Math.round(c.current), saving: 0 };
+      }
+      return c;
+    });
+
+    setBudgetIncome(income > 0 ? String(Math.round(income)) : '');
+    setLoadedCats(cats);
+    setView('budget');
   };
 
   const analysis = useMemo(() => {
@@ -2451,138 +2509,143 @@ export default function App() {
           );
         })()}
 
-        {/* ============ HABITS VIEW ============ */}
+        {/* ============ HABITS WIZARD ============ */}
         {view === 'habits' && analysis && (() => {
-          const HABIT_CATS = [
-            { cat: 'Dining Out',  verb: 'ate out',       unit: 'meal',    icon: '🍽', cutVerb: 'Skip one meal out',    suggestion: 0.75 },
-            { cat: 'Coffee',      verb: 'bought coffee', unit: 'coffee',  icon: '☕', cutVerb: 'Cut one coffee a week', suggestion: 0.75 },
-            { cat: 'Takeaway',    verb: 'ordered in',    unit: 'order',   icon: '📦', cutVerb: 'Drop one delivery',     suggestion: 0.75 },
-            { cat: 'Alcohol',     verb: 'bought alcohol',unit: 'visit',   icon: '🍺', cutVerb: 'Buy one round less',    suggestion: 0.75 },
-            { cat: 'Shopping',    verb: 'shopped online/retail', unit: 'purchase', icon: '🛍', cutVerb: 'Skip one purchase', suggestion: 0.80 },
-            { cat: 'Fuel',        verb: 'filled up',     unit: 'fillup',  icon: '⛽', cutVerb: 'Combine trips',          suggestion: 0.85 },
-            { cat: 'Entertainment', verb: 'went out',    unit: 'outing',  icon: '🎬', cutVerb: 'Skip one outing',       suggestion: 0.75 },
-          ];
+          const habits = computeHabits();
+          const isDone = habitStep > habits.length;
+          const isIntro = habitStep === 0;
+          const current = habits[habitStep - 1] ?? null;
 
-          const pm = analysis.periodMonths || 1;
+          const committedsaving = habits.reduce((s, h) => habitChoices[h.cat] === true ? s + h.saving : s, 0);
 
-          const habits = HABIT_CATS.map(({ cat, verb, unit, icon, cutVerb, suggestion }) => {
-            const entry = analysis.byCategory?.[cat];
-            if (!entry || entry.count === 0) return null;
-            const txns = entry.items;
-            const totalSpend = entry.total;
-            const countPerMonth = entry.count / pm;
-            const spendPerMonth = totalSpend / pm;
-            const avgPerVisit = totalSpend / txns.length;
-            const suggestedCount = Math.max(0, Math.round(countPerMonth * suggestion));
-            const suggestedSpend = suggestedCount * avgPerVisit;
-            const saving = spendPerMonth - suggestedSpend;
-            const timesPerWeek = countPerMonth / 4.33;
-            return { cat, verb, unit, icon, cutVerb, countPerMonth, spendPerMonth, avgPerVisit, suggestedCount, suggestedSpend, saving, timesPerWeek, txns };
-          }).filter(Boolean).filter(h => h.countPerMonth >= 1).sort((a, b) => b.saving - a.saving);
-
-          const totalSaving = habits.reduce((s, h) => s + h.saving, 0);
-
-          const fmtFreq = (n) => {
-            if (n >= 28) return `${Math.round(n)} times a month`;
-            if (n >= 7) return `${Math.round(n)} times a month`;
-            if (n < 1) return `${Math.round(n * 4.33)} times a month`;
-            const pw = n / 4.33;
-            if (pw >= 6) return 'daily';
-            if (pw >= 4.5) return '5–6×/week';
-            if (pw >= 3.5) return '4–5×/week';
-            if (pw >= 2.5) return '3–4×/week';
-            if (pw >= 1.8) return '2–3×/week';
-            if (pw >= 1.2) return 'about twice a week';
-            if (pw >= 0.8) return 'about once a week';
-            if (pw >= 0.5) return 'every couple of weeks';
-            return `${Math.round(n)} times a month`;
+          const answer = (yes) => {
+            const cat = habits[habitStep - 1].cat;
+            setHabitChoices(prev => ({ ...prev, [cat]: yes }));
+            setHabitStep(prev => prev + 1);
           };
 
           return (
-            <div className="fade-in">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 40 }}>
-                <button onClick={() => setView('results')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
-                  <ArrowLeft size={14} /> Results
+            <div className="fade-in" style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+              {/* Top bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6' }}>
+                <button
+                  onClick={() => habitStep === 0 ? setView('results') : setHabitStep(s => s - 1)}
+                  style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}
+                >
+                  <ArrowLeft size={14} /> {habitStep === 0 ? 'Results' : 'Back'}
                 </button>
                 <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>YOUR HABITS</span>
-                <button onClick={goToBudget} style={{ background: '#f4efe6', color: '#1f3a2e', border: 'none', padding: '6px 16px', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}>
-                  Build Budget →
-                </button>
+                {!isIntro && !isDone && (
+                  <span className="mono" style={{ fontSize: 12, opacity: 0.7 }}>{habitStep} of {habits.length}</span>
+                )}
+                {(isIntro || isDone) && <span style={{ width: 60 }} />}
               </div>
 
-              <section style={{ marginBottom: 40 }}>
-                <h2 className="display" style={{ fontSize: 36, fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Your spending habits</h2>
-                <p style={{ color: '#6b6758', margin: '0 0 28px', fontSize: 15 }}>
-                  Based on {Math.round(pm)} month{pm >= 1.5 ? 's' : ''} of transactions. How often you spend, what each visit costs, and what one small change saves.
-                </p>
-
-                {totalSaving > 0 && (
-                  <div style={{ padding: '20px 28px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                    <div>
-                      <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.7, marginBottom: 6 }}>One small change in each habit saves</div>
-                      <div className="display" style={{ fontSize: 40, fontWeight: 700, lineHeight: 1 }}>{fmt(totalSaving)}<span style={{ fontSize: 16, fontWeight: 400, opacity: 0.7 }}>/mo</span></div>
-                    </div>
-                    <div className="display" style={{ fontSize: 20, fontWeight: 700, opacity: 0.8 }}>{fmt(totalSaving * 12)}/yr</div>
-                  </div>
-                )}
-
-                <div style={{ display: 'grid', gap: 12 }}>
-                  {habits.map(({ cat, verb, icon, cutVerb, countPerMonth, spendPerMonth, avgPerVisit, suggestedCount, suggestedSpend, saving, timesPerWeek }) => {
-                    const currentRounded = Math.round(countPerMonth);
-                    const barWidth = Math.min(100, (suggestedCount / Math.max(currentRounded, 1)) * 100);
-                    return (
-                      <div key={cat} style={{ background: '#fff', border: '1px solid #e8e1d0' }}>
-                        {/* Header */}
-                        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e8e1d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <span style={{ fontSize: 24 }}>{icon}</span>
-                            <div>
-                              <div className="display" style={{ fontSize: 20, fontWeight: 700 }}>{cat}</div>
-                              <div style={{ fontSize: 13, color: '#6b6758', marginTop: 2 }}>
-                                You {verb} <strong>{fmtFreq(countPerMonth)}</strong> — {fmt(avgPerVisit)} avg per visit
-                              </div>
-                            </div>
-                          </div>
-                          {saving > 2 && (
-                            <div style={{ background: '#1f3a2e', color: '#f4efe6', padding: '6px 14px', fontSize: 13, fontWeight: 600 }}>
-                              Save {fmt(saving)}/mo
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Frequency bar + suggestion */}
-                        <div style={{ padding: '18px 20px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
-                            <div>
-                              <div className="mono" style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Current</div>
-                              <div className="display" style={{ fontSize: 28, fontWeight: 700, color: '#a04020' }}>{currentRounded}×<span style={{ fontSize: 14, color: '#6b6758', fontFamily: 'inherit', fontWeight: 400 }}>/mo</span></div>
-                              <div className="mono" style={{ fontSize: 12, color: '#6b6758', marginTop: 2 }}>{fmt(spendPerMonth)}/mo</div>
-                            </div>
-                            <div>
-                              <div className="mono" style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 6 }}>Suggested</div>
-                              <div className="display" style={{ fontSize: 28, fontWeight: 700, color: '#2e5a3a' }}>{suggestedCount}×<span style={{ fontSize: 14, color: '#6b6758', fontFamily: 'inherit', fontWeight: 400 }}>/mo</span></div>
-                              <div className="mono" style={{ fontSize: 12, color: '#6b6758', marginTop: 2 }}>{fmt(suggestedSpend)}/mo</div>
-                            </div>
-                          </div>
-
-                          {/* Visual bar: current vs suggested */}
-                          <div style={{ marginBottom: 12 }}>
-                            <div style={{ height: 8, background: '#fae8d7', position: 'relative', overflow: 'hidden' }}>
-                              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${barWidth}%`, background: '#2e5a3a', transition: 'width 0.4s ease' }} />
-                            </div>
-                          </div>
-
-                          {saving > 2 && (
-                            <div style={{ background: '#f0f7f2', border: '1px solid #b0d4bc', padding: '10px 14px', fontSize: 13, color: '#1f3a2e', lineHeight: 1.5 }}>
-                              <strong>{cutVerb}</strong> — drop from {currentRounded} to {suggestedCount} times a month and save {fmt(saving)}/mo ({fmt(saving * 12)}/yr).
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+              {/* Progress dots */}
+              {!isIntro && !isDone && habits.length > 1 && (
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'center', padding: '16px 0 0' }}>
+                  {habits.map((_, i) => (
+                    <div key={i} style={{ width: i === habitStep - 1 ? 24 : 8, height: 8, borderRadius: 4, background: i < habitStep ? '#1f3a2e' : '#d6cfc4', transition: 'all 0.3s' }} />
+                  ))}
                 </div>
-              </section>
+              )}
+
+              {/* INTRO SCREEN */}
+              {isIntro && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 24px', textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
+                  <div style={{ fontSize: 48, marginBottom: 24 }}>💬</div>
+                  <h2 className="display" style={{ fontSize: 40, fontWeight: 700, margin: '0 0 16px', lineHeight: 1.1 }}>Let's talk about your habits</h2>
+                  <p style={{ fontSize: 17, color: '#6b6758', lineHeight: 1.6, margin: '0 0 40px' }}>
+                    We found <strong>{habits.length} spending habit{habits.length !== 1 ? 's' : ''}</strong> in your statements. For each one, we'll show you what you currently spend — and ask if you're willing to cut back a little.
+                  </p>
+                  <p style={{ fontSize: 14, color: '#9a9288', margin: '0 0 40px' }}>Your answers shape your budget. No wrong answers.</p>
+                  <button
+                    onClick={() => setHabitStep(1)}
+                    style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '18px 48px', fontSize: 17, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+                  >
+                    Let's go →
+                  </button>
+                </div>
+              )}
+
+              {/* HABIT CARD */}
+              {!isIntro && !isDone && current && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px 24px', maxWidth: 540, margin: '0 auto', width: '100%' }}>
+                  <div style={{ fontSize: 56, marginBottom: 16 }}>{current.icon}</div>
+                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 12 }}>{current.cat}</div>
+                  <h3 className="display" style={{ fontSize: 32, fontWeight: 700, margin: '0 0 8px', lineHeight: 1.2, textAlign: 'center' }}>
+                    You {current.verb} <span style={{ color: '#a04020' }}>{Math.round(current.countPerMonth)} times</span> a month
+                  </h3>
+                  <p style={{ fontSize: 16, color: '#6b6758', margin: '0 0 32px', textAlign: 'center', lineHeight: 1.5 }}>
+                    {fmt(current.avgPerVisit)} per visit · {fmt(current.spendPerMonth)}/mo total
+                  </p>
+
+                  <div style={{ width: '100%', background: '#fff', border: '1px solid #e8e1d0', padding: '24px', marginBottom: 32, textAlign: 'center' }}>
+                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 10 }}>Would you be willing to drop this to</div>
+                    <div className="display" style={{ fontSize: 44, fontWeight: 700, color: '#2e5a3a', lineHeight: 1 }}>{current.suggestedCount}×<span style={{ fontSize: 18, color: '#6b6758', fontWeight: 400 }}>/mo</span></div>
+                    {current.saving > 2 && (
+                      <div style={{ marginTop: 10, fontSize: 15, color: '#2e5a3a', fontWeight: 600 }}>That saves you {fmt(current.saving)}/mo</div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%' }}>
+                    <button
+                      onClick={() => answer(true)}
+                      style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '20px', fontSize: 17, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+                    >
+                      Yes, I can
+                    </button>
+                    <button
+                      onClick={() => answer(false)}
+                      style={{ background: '#fff', color: '#3a3d38', border: '2px solid #d6cfc4', padding: '20px', fontSize: 17, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+                    >
+                      Not right now
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* DONE SCREEN */}
+              {isDone && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 24px', textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
+                  <div style={{ fontSize: 48, marginBottom: 24 }}>✅</div>
+                  <h2 className="display" style={{ fontSize: 40, fontWeight: 700, margin: '0 0 12px', lineHeight: 1.1 }}>Nice work.</h2>
+
+                  {committedsaving > 0 ? (
+                    <>
+                      <p style={{ fontSize: 17, color: '#6b6758', lineHeight: 1.6, margin: '0 0 24px' }}>
+                        Based on your answers, you're on track to save
+                      </p>
+                      <div style={{ background: '#1f3a2e', color: '#f4efe6', padding: '24px 40px', marginBottom: 32 }}>
+                        <div className="display" style={{ fontSize: 52, fontWeight: 700, lineHeight: 1 }}>{fmt(committedsaving)}</div>
+                        <div className="mono" style={{ fontSize: 12, letterSpacing: '0.1em', opacity: 0.7, marginTop: 6 }}>PER MONTH · {fmt(committedsaving * 12)} PER YEAR</div>
+                      </div>
+                      <div style={{ width: '100%', marginBottom: 32 }}>
+                        {habits.map(h => (
+                          <div key={h.cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #e8e1d0', fontSize: 14 }}>
+                            <span>{h.icon} {h.cat}</span>
+                            {habitChoices[h.cat] === true
+                              ? <span style={{ color: '#2e5a3a', fontWeight: 600 }}>−{fmt(h.saving)}/mo</span>
+                              : <span style={{ color: '#9a9288' }}>No change</span>
+                            }
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: 17, color: '#6b6758', lineHeight: 1.6, margin: '0 0 32px' }}>
+                      No worries — your budget will reflect your actual spending and we'll find savings elsewhere.
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => goToBudgetWithHabits(habitChoices)}
+                    style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '18px 48px', fontSize: 17, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
+                  >
+                    Build My Budget →
+                  </button>
+                </div>
+              )}
             </div>
           );
         })()}
