@@ -1622,6 +1622,11 @@ export default function App() {
           .budget-nav-label { display: none !important; }
           .salary-form { grid-template-columns: 1fr !important; }
         }
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(18px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .card-in { animation: cardIn 0.25s ease forwards; }
       `}</style>
 
       {/* ============ TOP NAV ============ */}
@@ -1914,8 +1919,8 @@ export default function App() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button className="btn-analyse" onClick={() => setView('results')}>
-                    Analyse Spending <ArrowRight size={20} />
+                  <button className="btn-analyse" onClick={() => { const h = computeHabits(); setHabitChoices({}); setHabitStep(0); setView(h.length > 0 ? 'habits' : 'results'); }}>
+                    Next <ArrowRight size={20} />
                   </button>
                   <button className="btn-ghost" onClick={reset}>
                     Start over
@@ -2517,92 +2522,102 @@ export default function App() {
         {/* ============ HABITS WIZARD ============ */}
         {view === 'habits' && analysis && (() => {
           const habits = computeHabits();
-          const isDone = habitStep > habits.length;
-          const isIntro = habitStep === 0;
-          const current = habits[habitStep - 1] ?? null;
+          const isDone = habitStep >= habits.length;
+          const current = habits[habitStep] ?? null;
+          const remaining = habits.length - habitStep;
+          const committedSaving = habits.reduce((s, h) => habitChoices[h.cat] === true ? s + h.saving : s, 0);
 
-          const committedsaving = habits.reduce((s, h) => habitChoices[h.cat] === true ? s + h.saving : s, 0);
+          const CARD_COLORS = [
+            { bg: '#FFE566', border: '#D4BC00', text: '#2d2500' },
+            { bg: '#ADE8FF', border: '#5ABADF', text: '#001a2d' },
+            { bg: '#FFB8CC', border: '#DF5A80', text: '#2d0015' },
+            { bg: '#B8FFD4', border: '#5ADF90', text: '#002d15' },
+            { bg: '#FFD4A8', border: '#DFA055', text: '#2d1500' },
+            { bg: '#D4B8FF', border: '#9055DF', text: '#15002d' },
+            { bg: '#FFE5A8', border: '#DFB855', text: '#2d1a00' },
+          ];
 
           const answer = (yes) => {
-            const cat = habits[habitStep - 1].cat;
-            setHabitChoices(prev => ({ ...prev, [cat]: yes }));
+            setHabitChoices(prev => ({ ...prev, [habits[habitStep].cat]: yes }));
             setHabitStep(prev => prev + 1);
           };
 
           return (
-            <div className="fade-in" style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', minHeight: '85vh' }}>
               {/* Top bar */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6' }}>
                 <button
-                  onClick={() => habitStep === 0 ? setView('results') : setHabitStep(s => s - 1)}
+                  onClick={() => habitStep === 0 ? setView('upload') : setHabitStep(s => s - 1)}
                   style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}
                 >
-                  <ArrowLeft size={14} /> {habitStep === 0 ? 'Results' : 'Back'}
+                  <ArrowLeft size={14} /> Back
                 </button>
                 <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>YOUR HABITS</span>
-                {!isIntro && !isDone && (
-                  <span className="mono" style={{ fontSize: 12, opacity: 0.7 }}>{habitStep} of {habits.length}</span>
-                )}
-                {(isIntro || isDone) && <span style={{ width: 60 }} />}
+                {!isDone
+                  ? <span className="mono" style={{ fontSize: 12, opacity: 0.6 }}>{habitStep + 1} / {habits.length}</span>
+                  : <span style={{ width: 40 }} />
+                }
               </div>
 
-              {/* Progress dots */}
-              {!isIntro && !isDone && habits.length > 1 && (
-                <div style={{ display: 'flex', gap: 6, justifyContent: 'center', padding: '16px 0 0' }}>
-                  {habits.map((_, i) => (
-                    <div key={i} style={{ width: i === habitStep - 1 ? 24 : 8, height: 8, borderRadius: 4, background: i < habitStep ? '#1f3a2e' : '#d6cfc4', transition: 'all 0.3s' }} />
-                  ))}
-                </div>
-              )}
-
-              {/* INTRO SCREEN */}
-              {isIntro && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 24px', textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-                  <div style={{ fontSize: 48, marginBottom: 24 }}>💬</div>
-                  <h2 className="display" style={{ fontSize: 40, fontWeight: 700, margin: '0 0 16px', lineHeight: 1.1 }}>Let's talk about your habits</h2>
-                  <p style={{ fontSize: 17, color: '#6b6758', lineHeight: 1.6, margin: '0 0 40px' }}>
-                    We found <strong>{habits.length} spending habit{habits.length !== 1 ? 's' : ''}</strong> in your statements. For each one, we'll show you what you currently spend — and ask if you're willing to cut back a little.
-                  </p>
-                  <p style={{ fontSize: 14, color: '#9a9288', margin: '0 0 40px' }}>Your answers shape your budget. No wrong answers.</p>
-                  <button
-                    onClick={() => setHabitStep(1)}
-                    style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '18px 48px', fontSize: 17, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
-                  >
-                    Let's go →
-                  </button>
-                </div>
-              )}
-
-              {/* HABIT CARD */}
-              {!isIntro && !isDone && current && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '40px 24px', maxWidth: 540, margin: '0 auto', width: '100%' }}>
-                  <div style={{ fontSize: 56, marginBottom: 16 }}>{current.icon}</div>
-                  <div className="mono" style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 12 }}>{current.cat}</div>
-                  <h3 className="display" style={{ fontSize: 32, fontWeight: 700, margin: '0 0 8px', lineHeight: 1.2, textAlign: 'center' }}>
-                    You {current.verb} <span style={{ color: '#a04020' }}>{Math.round(current.countPerMonth)} times</span> a month
-                  </h3>
-                  <p style={{ fontSize: 16, color: '#6b6758', margin: '0 0 32px', textAlign: 'center', lineHeight: 1.5 }}>
-                    {fmt(current.avgPerVisit)} per visit · {fmt(current.spendPerMonth)}/mo total
+              {/* CARD STACK */}
+              {!isDone && current && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px 20px' }}>
+                  <p className="display" style={{ fontSize: 22, fontWeight: 700, margin: '0 0 28px', textAlign: 'center' }}>
+                    Let's talk about your habits
                   </p>
 
-                  <div style={{ width: '100%', background: '#fff', border: '1px solid #e8e1d0', padding: '24px', marginBottom: 32, textAlign: 'center' }}>
-                    <div className="mono" style={{ fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', marginBottom: 10 }}>Would you be willing to drop this to</div>
-                    <div className="display" style={{ fontSize: 44, fontWeight: 700, color: '#2e5a3a', lineHeight: 1 }}>{current.suggestedCount}×<span style={{ fontSize: 18, color: '#6b6758', fontWeight: 400 }}>/mo</span></div>
-                    {current.saving > 2 && (
-                      <div style={{ marginTop: 10, fontSize: 15, color: '#2e5a3a', fontWeight: 600 }}>That saves you {fmt(current.saving)}/mo</div>
+                  {/* Stack */}
+                  <div style={{ position: 'relative', width: '100%', maxWidth: 400, marginBottom: 28 }}>
+                    {/* Shadow cards behind */}
+                    {remaining >= 3 && (
+                      <div style={{ position: 'absolute', inset: 0, background: CARD_COLORS[(habitStep + 2) % CARD_COLORS.length].bg, transform: 'translateY(14px) translateX(8px) rotate(3deg)', borderRadius: 2, border: `2px solid ${CARD_COLORS[(habitStep + 2) % CARD_COLORS.length].border}` }} />
                     )}
+                    {remaining >= 2 && (
+                      <div style={{ position: 'absolute', inset: 0, background: CARD_COLORS[(habitStep + 1) % CARD_COLORS.length].bg, transform: 'translateY(7px) translateX(-5px) rotate(-1.5deg)', borderRadius: 2, border: `2px solid ${CARD_COLORS[(habitStep + 1) % CARD_COLORS.length].border}` }} />
+                    )}
+                    {/* Top card */}
+                    {(() => {
+                      const col = CARD_COLORS[habitStep % CARD_COLORS.length];
+                      return (
+                        <div
+                          key={habitStep}
+                          className="card-in"
+                          style={{ position: 'relative', background: col.bg, border: `2px solid ${col.border}`, borderRadius: 2, padding: '32px 28px', color: col.text, boxShadow: '0 6px 28px rgba(0,0,0,0.18)' }}
+                        >
+                          <div style={{ fontSize: 40, marginBottom: 12, textAlign: 'center' }}>{current.icon}</div>
+                          <div className="mono" style={{ fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.6, textAlign: 'center', marginBottom: 8 }}>{current.cat}</div>
+                          <div className="display" style={{ fontSize: 28, fontWeight: 700, textAlign: 'center', lineHeight: 1.2, marginBottom: 6 }}>
+                            You {current.verb}<br />
+                            <span style={{ color: '#c04010' }}>{Math.round(current.countPerMonth)} times</span> a month
+                          </div>
+                          <div style={{ fontSize: 14, textAlign: 'center', opacity: 0.7, marginBottom: 24 }}>
+                            {fmt(current.avgPerVisit)} avg · {fmt(current.spendPerMonth)}/mo
+                          </div>
+                          <div style={{ background: 'rgba(0,0,0,0.07)', borderRadius: 2, padding: '16px 20px', textAlign: 'center', marginBottom: 0 }}>
+                            <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 6 }}>Would you be willing to drop to</div>
+                            <div className="display" style={{ fontSize: 38, fontWeight: 700, lineHeight: 1 }}>
+                              {current.suggestedCount}<span style={{ fontSize: 18, fontWeight: 400 }}>× /mo</span>
+                            </div>
+                            {current.saving > 2 && (
+                              <div style={{ fontSize: 14, fontWeight: 600, marginTop: 6 }}>Save {fmt(current.saving)}/mo</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%' }}>
+                  {/* Buttons */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%', maxWidth: 400 }}>
                     <button
                       onClick={() => answer(true)}
-                      style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '20px', fontSize: 17, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+                      style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '18px', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', borderRadius: 2 }}
                     >
                       Yes, I can
                     </button>
                     <button
                       onClick={() => answer(false)}
-                      style={{ background: '#fff', color: '#3a3d38', border: '2px solid #d6cfc4', padding: '20px', fontSize: 17, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+                      style={{ background: '#fff', color: '#3a3d38', border: '2px solid #d6cfc4', padding: '18px', fontSize: 16, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', borderRadius: 2 }}
                     >
                       Not right now
                     </button>
@@ -2612,40 +2627,35 @@ export default function App() {
 
               {/* DONE SCREEN */}
               {isDone && (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 24px', textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-                  <div style={{ fontSize: 48, marginBottom: 24 }}>✅</div>
-                  <h2 className="display" style={{ fontSize: 40, fontWeight: 700, margin: '0 0 12px', lineHeight: 1.1 }}>Nice work.</h2>
-
-                  {committedsaving > 0 ? (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 24px', textAlign: 'center', maxWidth: 480, margin: '0 auto', width: '100%' }}>
+                  <div className="display" style={{ fontSize: 44, fontWeight: 700, margin: '0 0 8px' }}>All done.</div>
+                  {committedSaving > 0 ? (
                     <>
-                      <p style={{ fontSize: 17, color: '#6b6758', lineHeight: 1.6, margin: '0 0 24px' }}>
-                        Based on your answers, you're on track to save
-                      </p>
-                      <div style={{ background: '#1f3a2e', color: '#f4efe6', padding: '24px 40px', marginBottom: 32 }}>
-                        <div className="display" style={{ fontSize: 52, fontWeight: 700, lineHeight: 1 }}>{fmt(committedsaving)}</div>
-                        <div className="mono" style={{ fontSize: 12, letterSpacing: '0.1em', opacity: 0.7, marginTop: 6 }}>PER MONTH · {fmt(committedsaving * 12)} PER YEAR</div>
+                      <p style={{ fontSize: 16, color: '#6b6758', margin: '0 0 24px', lineHeight: 1.6 }}>Based on your answers, you could save</p>
+                      <div style={{ background: '#1f3a2e', color: '#f4efe6', padding: '24px 40px', marginBottom: 28, width: '100%' }}>
+                        <div className="display" style={{ fontSize: 52, fontWeight: 700, lineHeight: 1 }}>{fmt(committedSaving)}<span style={{ fontSize: 20, fontWeight: 400, opacity: 0.7 }}>/mo</span></div>
+                        <div className="mono" style={{ fontSize: 11, opacity: 0.6, marginTop: 6, letterSpacing: '0.1em' }}>{fmt(committedSaving * 12)} PER YEAR</div>
                       </div>
-                      <div style={{ width: '100%', marginBottom: 32 }}>
-                        {habits.map(h => (
+                      <div style={{ width: '100%', marginBottom: 28 }}>
+                        {habits.map((h, i) => (
                           <div key={h.cat} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #e8e1d0', fontSize: 14 }}>
                             <span>{h.icon} {h.cat}</span>
                             {habitChoices[h.cat] === true
-                              ? <span style={{ color: '#2e5a3a', fontWeight: 600 }}>−{fmt(h.saving)}/mo</span>
-                              : <span style={{ color: '#9a9288' }}>No change</span>
+                              ? <span style={{ color: '#2e5a3a', fontWeight: 700 }}>−{fmt(h.saving)}/mo</span>
+                              : <span style={{ color: '#b0a898' }}>Keeping as is</span>
                             }
                           </div>
                         ))}
                       </div>
                     </>
                   ) : (
-                    <p style={{ fontSize: 17, color: '#6b6758', lineHeight: 1.6, margin: '0 0 32px' }}>
-                      No worries — your budget will reflect your actual spending and we'll find savings elsewhere.
+                    <p style={{ fontSize: 16, color: '#6b6758', margin: '0 0 32px', lineHeight: 1.6 }}>
+                      No worries — your budget reflects your actual spending and we'll find other ways to save.
                     </p>
                   )}
-
                   <button
                     onClick={() => goToBudgetWithHabits(habitChoices)}
-                    style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '18px 48px', fontSize: 17, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
+                    style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '18px', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}
                   >
                     Build My Budget →
                   </button>
