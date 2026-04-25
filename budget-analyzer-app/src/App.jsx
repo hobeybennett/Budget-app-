@@ -97,7 +97,130 @@ const AU_SALARY_BENCHMARKS = [
 
 const AU_LOCATION_PREMIUM = { sydney: 0.12, melbourne: 0.10, brisbane: 0.05, perth: 0.08, canberra: 0.18, adelaide: -0.02, hobart: -0.05, darwin: 0.06, national: 0 };
 
-// --- Australian merchant categorisation rules ---
+// Bill comparison lookup — matched against recurring expense descriptions
+const BILL_LOOKUP = [
+  // Electricity / Gas
+  { match: ['agl'], provider: 'AGL', cat: 'Electricity & Gas', icon: '⚡', alts: [
+    { name: 'Energy Made Easy', desc: 'Government comparison — free, covers every provider in your area', url: 'https://www.energymadeeasy.gov.au', badge: 'Gov tool' },
+    { name: 'Amber Electric', desc: 'Wholesale rates — avg household saves $300–600/yr', url: 'https://www.amber.com.au', badge: 'Switch' },
+    { name: 'Red Energy', desc: '100% Australian-owned, competitive rates', url: 'https://www.redenergy.com.au', badge: 'Switch' },
+  ]},
+  { match: ['origin energy', 'origin '], provider: 'Origin Energy', cat: 'Electricity & Gas', icon: '⚡', alts: [
+    { name: 'Energy Made Easy', desc: 'Government comparison — free, covers your area', url: 'https://www.energymadeeasy.gov.au', badge: 'Gov tool' },
+    { name: 'Amber Electric', desc: 'Wholesale rates — save $300–600/yr avg', url: 'https://www.amber.com.au', badge: 'Switch' },
+    { name: 'Alinta Energy', desc: 'Competitive electricity & gas bundles', url: 'https://www.alintaenergy.com.au', badge: 'Switch' },
+  ]},
+  { match: ['energyaustralia', 'energy australia'], provider: 'EnergyAustralia', cat: 'Electricity & Gas', icon: '⚡', alts: [
+    { name: 'Energy Made Easy', desc: 'Government comparison tool', url: 'https://www.energymadeeasy.gov.au', badge: 'Gov tool' },
+    { name: 'Simply Energy', desc: 'Flat-rate plans, easy to understand', url: 'https://www.simplyenergy.com.au', badge: 'Switch' },
+    { name: 'Amber Electric', desc: 'Wholesale rates', url: 'https://www.amber.com.au', badge: 'Switch' },
+  ]},
+  { match: ['alinta'], provider: 'Alinta Energy', cat: 'Electricity & Gas', icon: '⚡', alts: [
+    { name: 'Energy Made Easy', desc: 'Find cheaper in your area', url: 'https://www.energymadeeasy.gov.au', badge: 'Gov tool' },
+    { name: 'Amber Electric', desc: 'Wholesale rates', url: 'https://www.amber.com.au', badge: 'Switch' },
+  ]},
+  { match: ['simply energy'], provider: 'Simply Energy', cat: 'Electricity & Gas', icon: '⚡', alts: [
+    { name: 'Energy Made Easy', desc: 'Government comparison', url: 'https://www.energymadeeasy.gov.au', badge: 'Gov tool' },
+    { name: 'Amber Electric', desc: 'Wholesale rates — often cheaper', url: 'https://www.amber.com.au', badge: 'Switch' },
+  ]},
+  { match: ['lumo energy', 'powershop', 'red energy', 'momentum energy', 'click energy', 'dodo power', 'sumo gas'], provider: null, cat: 'Electricity & Gas', icon: '⚡', alts: [
+    { name: 'Energy Made Easy', desc: 'Government comparison — find cheapest for your address', url: 'https://www.energymadeeasy.gov.au', badge: 'Gov tool' },
+    { name: 'Amber Electric', desc: 'Wholesale rates — save avg $300–600/yr', url: 'https://www.amber.com.au', badge: 'Switch' },
+  ]},
+  // Internet & Phone
+  { match: ['telstra'], provider: 'Telstra', cat: 'Internet & Mobile', icon: '📡', alts: [
+    { name: 'Aussie Broadband', desc: 'NBN 100 from $75/mo — local support, no lock-in', url: 'https://www.aussiebroadband.com.au', badge: 'NBN' },
+    { name: 'Superloop', desc: 'NBN 100 from $69/mo — fast and reliable', url: 'https://www.superloop.com', badge: 'NBN' },
+    { name: 'Boost Mobile', desc: "Uses Telstra's network. 25GB + unlimited calls from $30/mo", url: 'https://www.boost.com.au', badge: 'Mobile' },
+  ]},
+  { match: ['optus'], provider: 'Optus', cat: 'Internet & Mobile', icon: '📡', alts: [
+    { name: 'Aussie Broadband', desc: 'NBN from $75/mo — consistently highly rated', url: 'https://www.aussiebroadband.com.au', badge: 'NBN' },
+    { name: 'Circles.Life', desc: '40GB + unlimited calls from $28/mo', url: 'https://www.circles.life/au/', badge: 'Mobile' },
+    { name: 'WhistleOut', desc: 'Compare all NBN & mobile plans in 2 minutes', url: 'https://www.whistleout.com.au', badge: 'Compare' },
+  ]},
+  { match: ['tpg', 'iinet', 'internode', 'dodo internet', 'belong'], provider: null, cat: 'Internet & Mobile', icon: '📡', alts: [
+    { name: 'Aussie Broadband', desc: 'NBN 100 from $75/mo — top-rated support', url: 'https://www.aussiebroadband.com.au', badge: 'NBN' },
+    { name: 'Superloop', desc: 'NBN 100 from $69/mo', url: 'https://www.superloop.com', badge: 'NBN' },
+    { name: 'Exetel', desc: 'NBN 50 from $59/mo — month-to-month', url: 'https://www.exetel.com.au', badge: 'NBN' },
+  ]},
+  { match: ['vodafone'], provider: 'Vodafone', cat: 'Internet & Mobile', icon: '📡', alts: [
+    { name: 'Circles.Life', desc: '40GB + unlimited from $28/mo', url: 'https://www.circles.life/au/', badge: 'Mobile' },
+    { name: 'amaysim', desc: '12GB + unlimited from $18/mo (Optus network)', url: 'https://www.amaysim.com.au', badge: 'Mobile' },
+    { name: 'WhistleOut', desc: 'Compare every plan', url: 'https://www.whistleout.com.au', badge: 'Compare' },
+  ]},
+  // Insurance
+  { match: ['nrma'], provider: 'NRMA Insurance', cat: 'Insurance', icon: '🛡', alts: [
+    { name: 'Budget Direct', desc: 'Typically 20–40% cheaper than big brands — car & home', url: 'https://www.budgetdirect.com.au', badge: 'Switch' },
+    { name: 'Bingle', desc: 'Online-only car insurance — no frills, lowest price', url: 'https://www.bingle.com.au', badge: 'Car' },
+    { name: 'Canstar', desc: 'Compare every insurer side by side', url: 'https://www.canstar.com.au/car-insurance/', badge: 'Compare' },
+  ]},
+  { match: ['aami'], provider: 'AAMI', cat: 'Insurance', icon: '🛡', alts: [
+    { name: 'Budget Direct', desc: 'Often 20–40% cheaper on car & home', url: 'https://www.budgetdirect.com.au', badge: 'Switch' },
+    { name: 'Honey Insurance', desc: 'Smart home insurance — sensor discount applies', url: 'https://www.honey.insurance', badge: 'Home' },
+    { name: 'Canstar', desc: 'Compare all insurers', url: 'https://www.canstar.com.au/insurance/', badge: 'Compare' },
+  ]},
+  { match: ['gio ', 'gio insurance', 'suncorp', 'allianz', 'comminsure', 'racq', 'rac ', 'sgic', 'cua insurance', 'youi'], provider: null, cat: 'Insurance', icon: '🛡', alts: [
+    { name: 'Budget Direct', desc: 'Typically 20–40% cheaper — car & home', url: 'https://www.budgetdirect.com.au', badge: 'Switch' },
+    { name: 'Canstar', desc: 'Compare every insurer', url: 'https://www.canstar.com.au/insurance/', badge: 'Compare' },
+  ]},
+  { match: ['medibank'], provider: 'Medibank', cat: 'Health Insurance', icon: '🏥', alts: [
+    { name: 'privatehealth.gov.au', desc: 'Official government comparison — free, comprehensive', url: 'https://www.privatehealth.gov.au', badge: 'Gov tool' },
+    { name: 'HCF', desc: 'Not-for-profit — often 10–20% cheaper than big funds', url: 'https://www.hcf.com.au', badge: 'Switch' },
+    { name: 'GMHBA', desc: 'Member-owned fund, competitive premiums', url: 'https://www.gmhba.com.au', badge: 'Switch' },
+  ]},
+  { match: ['bupa'], provider: 'Bupa', cat: 'Health Insurance', icon: '🏥', alts: [
+    { name: 'privatehealth.gov.au', desc: 'Government comparison — free', url: 'https://www.privatehealth.gov.au', badge: 'Gov tool' },
+    { name: 'HCF', desc: 'Not-for-profit, often 10–20% cheaper', url: 'https://www.hcf.com.au', badge: 'Switch' },
+    { name: 'Teachers Health', desc: 'Open to all — competitive premiums', url: 'https://www.teachershealth.com.au', badge: 'Switch' },
+  ]},
+  { match: ['hcf', 'nib ','nib health', 'australian unity health', 'peoplecare', 'cbhs', 'frank health'], provider: null, cat: 'Health Insurance', icon: '🏥', alts: [
+    { name: 'privatehealth.gov.au', desc: 'Government comparison — compare all funds free', url: 'https://www.privatehealth.gov.au', badge: 'Gov tool' },
+  ]},
+  // Streaming & Subscriptions
+  { match: ['netflix'], provider: 'Netflix', cat: 'Streaming', icon: '📺', alts: [
+    { name: 'Netflix with Ads', desc: 'Same library, $7.99/mo instead of $22.99 — saves $180/yr', url: 'https://www.netflix.com/au', badge: 'Downgrade plan' },
+    { name: 'Rotate services', desc: 'Subscribe for 1–2 months, pause, swap to Disney+ or Stan. Save $100+/yr.', url: null, badge: 'Tip' },
+  ]},
+  { match: ['disney'], provider: 'Disney+', cat: 'Streaming', icon: '📺', alts: [
+    { name: 'Disney+ Basic', desc: 'Ad-supported tier — lower price, same content', url: 'https://www.disneyplus.com/en-au', badge: 'Downgrade plan' },
+    { name: 'Rotate services', desc: 'Pause Disney+, subscribe to Netflix for a month, rotate back.', url: null, badge: 'Tip' },
+  ]},
+  { match: ['foxtel', 'binge'], provider: 'Foxtel/Binge', cat: 'Streaming', icon: '📺', alts: [
+    { name: 'Binge Basic', desc: '$10/mo vs Foxtel $46+/mo — same Foxtel content', url: 'https://www.binge.com.au', badge: 'Downgrade' },
+    { name: 'Kayo Sports', desc: 'Sport only — $25/mo for live sports only', url: 'https://kayosports.com.au', badge: 'Sports only' },
+  ]},
+  { match: ['spotify'], provider: 'Spotify', cat: 'Music', icon: '🎵', alts: [
+    { name: 'Spotify Family', desc: 'Up to 6 people — $17.99/mo total ($3/person vs $13.99)', url: 'https://www.spotify.com/au/family/', badge: 'Share plan' },
+    { name: 'YouTube Music', desc: 'Included with YouTube Premium — $14.99/mo bundles both', url: 'https://music.youtube.com', badge: 'Bundle' },
+  ]},
+  // Gym
+  { match: ['anytime fitness'], provider: 'Anytime Fitness', cat: 'Gym', icon: '🏋', alts: [
+    { name: 'Jetts Fitness', desc: 'No lock-in, 24/7 access — often $10–15/mo cheaper', url: 'https://www.jetts.com.au', badge: 'Switch' },
+    { name: 'Council gym / pool', desc: 'Local council facilities from $10–18/mo — half the price', url: null, badge: 'Tip' },
+    { name: 'Fitness First', desc: 'Compare 12-month contract rates — sometimes cheaper', url: 'https://www.fitnessfirst.com.au', badge: 'Compare' },
+  ]},
+  { match: ['fitness first', 'goodlife', 'virgin active', 'f45'], provider: null, cat: 'Gym', icon: '🏋', alts: [
+    { name: 'Jetts Fitness', desc: 'No lock-in gym, 24/7 access — often cheaper', url: 'https://www.jetts.com.au', badge: 'Switch' },
+    { name: 'Council gym / pool', desc: 'Often $10–18/mo — compare with your local council', url: null, badge: 'Tip' },
+  ]},
+];
+
+const BADGE_COLORS = {
+  'Gov tool': { bg: '#dfe8d8', text: '#2e5a3a' },
+  'Switch':   { bg: '#fae8d7', text: '#7a3010' },
+  'Compare':  { bg: '#e8e1d0', text: '#3a3020' },
+  'NBN':      { bg: '#d8e0f0', text: '#1a2a6a' },
+  'Mobile':   { bg: '#d8e0f0', text: '#1a2a6a' },
+  'Downgrade plan': { bg: '#f8f0e0', text: '#6a4010' },
+  'Downgrade': { bg: '#f8f0e0', text: '#6a4010' },
+  'Share plan': { bg: '#e0d8f0', text: '#3a1a6a' },
+  'Bundle':   { bg: '#e0d8f0', text: '#3a1a6a' },
+  'Tip':      { bg: '#e0f0e8', text: '#1a4a30' },
+  'Car':      { bg: '#fae8d7', text: '#7a3010' },
+  'Home':     { bg: '#fae8d7', text: '#7a3010' },
+  'Health':   { bg: '#fae8d7', text: '#7a3010' },
+  'Sports only': { bg: '#f0e8d8', text: '#5a3a10' },
+};
 // Rule order matters — the FIRST matching rule wins. So specific patterns
 // (e.g. "mortgage") must come before generic ones (e.g. "transfer to").
 const CATEGORY_RULES = [
@@ -1749,10 +1872,10 @@ export default function App() {
               </div>
             </div>
             <p className="display" style={{ fontSize: 22, fontWeight: 700, margin: '24px 0 0', maxWidth: 640, lineHeight: 1.35, color: '#1f3a2e' }}>
-              Most budgets fail because they're fiction.<br />Pinchy builds yours from what your money actually does.
+              Find out what you're paying for your bills — and where you're overpaying.
             </p>
             <p style={{ fontSize: 15, maxWidth: 600, margin: '14px 0 0', color: '#6b6758', lineHeight: 1.6 }}>
-              Upload a CSV export from your bank. Categorises your spending, compares it to the average Australian household, and finds cheaper alternatives — all in your browser. <strong style={{ color: '#3a3d38' }}>Your file never leaves your device.</strong>
+              Upload a bank statement CSV and Pinchy finds your utilities, insurance, internet, phone and subscriptions — then shows you a cheaper option for each one. <strong style={{ color: '#3a3d38' }}>Processed in your browser. Nothing uploaded.</strong>
             </p>
           </header>
         )}
@@ -1919,7 +2042,7 @@ export default function App() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button className="btn-analyse" onClick={() => { const h = computeHabits(); setHabitChoices({}); setHabitStep(0); setView(h.length > 0 ? 'habits' : 'results'); }}>
+                  <button className="btn-analyse" onClick={() => setView('bills')}>
                     Next <ArrowRight size={20} />
                   </button>
                   <button className="btn-ghost" onClick={reset}>
@@ -1940,6 +2063,145 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* ============ BILLS VIEW ============ */}
+        {view === 'bills' && analysis && (() => {
+          // Match recurring expenses + category transactions against BILL_LOOKUP
+          const matchBill = (description) => {
+            const d = (description || '').toLowerCase();
+            return BILL_LOOKUP.find(b => b.match.some(kw => d.includes(kw))) ?? null;
+          };
+
+          // Build a deduplicated list of matched bills from recurring expenses
+          const seen = new Set();
+          const bills = [];
+          for (const r of analysis.recurringExpenses) {
+            const hit = matchBill(r.sample);
+            if (!hit) continue;
+            const key = hit.cat + ':' + (hit.provider ?? r.sample);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            bills.push({ ...hit, monthly: r.monthlyEquivalent, sample: r.sample, detectedProvider: hit.provider ?? r.sample });
+          }
+          // Also check non-recurring transactions in relevant categories
+          const BILL_CATS = new Set(['Utilities', 'Phone & Internet', 'Insurance', 'Subscriptions']);
+          for (const [cat, data] of Object.entries(analysis.byCategory)) {
+            if (!BILL_CATS.has(cat)) continue;
+            for (const txn of data.items) {
+              const hit = matchBill(txn.description);
+              if (!hit) continue;
+              const key = hit.cat + ':' + (hit.provider ?? txn.description);
+              if (seen.has(key)) continue;
+              seen.add(key);
+              bills.push({ ...hit, monthly: Math.abs(txn.amount), sample: txn.description, detectedProvider: hit.provider ?? txn.description });
+            }
+          }
+
+          const totalMonthly = bills.reduce((s, b) => s + b.monthly, 0);
+
+          return (
+            <div className="fade-in">
+              {/* Top bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#1f3a2e', color: '#f4efe6', marginBottom: 32, flexWrap: 'wrap', gap: 8 }}>
+                <button onClick={() => setView('upload')} style={{ background: 'transparent', border: 'none', color: '#f4efe6', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                  <ArrowLeft size={14} /> Back
+                </button>
+                <span className="mono" style={{ fontSize: 13, letterSpacing: '0.1em' }}>YOUR BILLS</span>
+                <button onClick={() => setView('results')} style={{ background: 'transparent', border: '1px solid rgba(244,239,230,0.4)', color: '#f4efe6', padding: '6px 14px', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer' }}>
+                  Full analysis →
+                </button>
+              </div>
+
+              <div style={{ padding: '0 0 48px' }}>
+                {/* Header */}
+                <div style={{ marginBottom: 28 }}>
+                  <h2 className="display" style={{ fontSize: 32, fontWeight: 700, margin: '0 0 6px' }}>
+                    {bills.length > 0 ? `We found ${bills.length} bill${bills.length !== 1 ? 's' : ''} you might be overpaying on` : 'Your bills'}
+                  </h2>
+                  {bills.length > 0 && (
+                    <p style={{ fontSize: 15, color: '#6b6758', margin: 0 }}>
+                      You're spending <strong style={{ color: '#1f3a2e' }}>{fmt(totalMonthly)}/mo</strong> on these. Here's where you can save.
+                    </p>
+                  )}
+                </div>
+
+                {bills.length === 0 && (
+                  <div style={{ padding: '48px 24px', textAlign: 'center', border: '2px dashed #d6cfc4' }}>
+                    <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
+                    <div className="display" style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>No known bills detected</div>
+                    <p style={{ color: '#6b6758', margin: '0 0 24px' }}>We couldn't match any transactions to known utility or subscription providers. Try the full analysis to see all your spending.</p>
+                    <button onClick={() => setView('results')} style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '12px 28px', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>
+                      View Full Analysis
+                    </button>
+                  </div>
+                )}
+
+                {/* Bill cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 28 }}>
+                  {bills.map((bill, i) => (
+                    <div key={i} style={{ background: '#fff', border: '1px solid #e8e1d0', overflow: 'hidden' }}>
+                      {/* Card header */}
+                      <div style={{ padding: '16px 20px', borderBottom: '1px solid #e8e1d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#faf6ee' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 22 }}>{bill.icon}</span>
+                          <div>
+                            <div className="display" style={{ fontSize: 17, fontWeight: 700, lineHeight: 1 }}>{bill.detectedProvider}</div>
+                            <div className="mono" style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6758', marginTop: 3 }}>{bill.cat}</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="display" style={{ fontSize: 22, fontWeight: 700, color: '#a04020' }}>{fmt(bill.monthly)}</div>
+                          <div className="mono" style={{ fontSize: 10, color: '#6b6758' }}>/mo</div>
+                        </div>
+                      </div>
+                      {/* Alternatives */}
+                      <div style={{ padding: '12px 0' }}>
+                        <div className="mono" style={{ fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#6b6758', padding: '0 20px 8px' }}>Better deals available</div>
+                        {bill.alts.map((alt, j) => {
+                          const bc = BADGE_COLORS[alt.badge] ?? { bg: '#e8e1d0', text: '#3a3020' };
+                          return (
+                            <div key={j} style={{ padding: '10px 20px', borderTop: j === 0 ? 'none' : '1px solid #f0ebe0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{alt.name}</div>
+                                <div style={{ fontSize: 12, color: '#6b6758', lineHeight: 1.4 }}>{alt.desc}</div>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                                <span style={{ background: bc.bg, color: bc.text, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 7px' }}>{alt.badge}</span>
+                                {alt.url && (
+                                  <a href={alt.url} target="_blank" rel="noopener noreferrer" style={{ background: '#1f3a2e', color: '#f4efe6', fontSize: 11, fontWeight: 600, padding: '5px 10px', textDecoration: 'none', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                                    Compare →
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom CTAs */}
+                {bills.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <button
+                      onClick={() => { setHabitStep(0); setHabitChoices({}); setView('habits'); }}
+                      style={{ background: '#2e5a3a', color: '#f4efe6', border: 'none', padding: '18px', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+                    >
+                      <Zap size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />Review Habits
+                    </button>
+                    <button
+                      onClick={goToBudget}
+                      style={{ background: '#1f3a2e', color: '#f4efe6', border: 'none', padding: '18px', fontSize: 15, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+                    >
+                      Build My Budget →
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ============ RESULTS VIEW ============ */}
         {view === 'results' && analysis && (
