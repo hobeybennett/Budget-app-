@@ -2427,7 +2427,6 @@ export default function App() {
                 </button>
               </div>
             </section>
-            </section>
           </div>
         )}
 
